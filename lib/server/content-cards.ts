@@ -23,6 +23,27 @@ const accountTypeByPlatform: Record<Platform, string> = {
   [Platform.CUSTOM_SITE]: "CUSTOM_SITE"
 };
 
+const unschedulableStatuses = [
+  ContentStatus.PUBLISHED,
+  ContentStatus.PUBLISHING
+] as const;
+
+function scheduledQueueData(scheduledAt: Date) {
+  return {
+    errorCode: null,
+    errorMessage: null,
+    externalPostId: null,
+    externalPostUrl: null,
+    manualCheckReason: null,
+    nextAttemptAt: null,
+    publishedAt: null,
+    publishingStartedAt: null,
+    retryCount: 0,
+    scheduledAt,
+    status: ContentStatus.SCHEDULED
+  };
+}
+
 /** Tek bir icerik kartini dogrulayip olusturur (platformData validate edilir). */
 export async function createContentCard(input: CreateContentCardInput) {
   const platformData = serializePlatformData(
@@ -111,16 +132,28 @@ export async function listContentCards(filter: ContentCardFilter = {}) {
 
 /** Bir karti planlar (status -> SCHEDULED, scheduledAt set). */
 export async function scheduleContentCard(id: string, scheduledAt: Date) {
-  return prisma.contentCard.update({
-    where: { id },
-    data: {
-      scheduledAt,
-      status: ContentStatus.SCHEDULED,
-      nextAttemptAt: null,
-      errorCode: null,
-      errorMessage: null
-    }
+  const result = await prisma.contentCard.updateMany({
+    where: {
+      id,
+      status: { notIn: [...unschedulableStatuses] }
+    },
+    data: scheduledQueueData(scheduledAt)
   });
+
+  if (result.count !== 1) {
+    throw new Error("Kart bulunamadi veya yayin durumundayken planlanamaz.");
+  }
+
+  return prisma.contentCard.findUniqueOrThrow({ where: { id } });
+}
+
+function scheduleWhereForId(id: string): Prisma.ContentCardWhereInput {
+  return {
+    id,
+    status: {
+      notIn: [...unschedulableStatuses]
+    }
+  };
 }
 
 /**
@@ -139,19 +172,8 @@ export async function bulkScheduleContentCards(
   const results = await prisma.$transaction(
     entries.map((entry) =>
       prisma.contentCard.updateMany({
-        where: {
-          id: entry.id,
-          status: {
-            notIn: [ContentStatus.PUBLISHED, ContentStatus.PUBLISHING]
-          }
-        },
-        data: {
-          scheduledAt: entry.scheduledAt,
-          status: ContentStatus.SCHEDULED,
-          nextAttemptAt: null,
-          errorCode: null,
-          errorMessage: null
-        }
+        where: scheduleWhereForId(entry.id),
+        data: scheduledQueueData(entry.scheduledAt)
       })
     )
   );
@@ -175,7 +197,13 @@ export async function updateContentCard(
   }
 
   if ("scheduledAt" in input) {
-    data.scheduledAt = input.scheduledAt;
+    if (input.scheduledAt) {
+      Object.assign(data, scheduledQueueData(input.scheduledAt));
+    } else {
+      data.nextAttemptAt = null;
+      data.scheduledAt = null;
+      data.status = input.status ?? ContentStatus.DRAFT;
+    }
   }
 
   if (input.status) {
@@ -202,7 +230,12 @@ export async function cancelContentCard(id: string) {
 
   const updated = await prisma.contentCard.update({
     where: { id },
-    data: { status: ContentStatus.CANCELED, scheduledAt: null }
+    data: {
+      nextAttemptAt: null,
+      publishingStartedAt: null,
+      scheduledAt: null,
+      status: ContentStatus.CANCELED
+    }
   });
 
   return { ok: true as const, card: updated };
@@ -210,14 +243,23 @@ export async function cancelContentCard(id: string) {
 
 /** Hatali/iptal karti tekrar planlama kuyruguna alir. */
 export async function retryContentCard(id: string) {
+  const card = await prisma.contentCard.findUnique({ where: { id } });
+
+  if (!card) {
+    throw new Error("Kart bulunamadi.");
+  }
+
+  if (unschedulableStatuses.some((status) => status === card.status)) {
+    throw new Error("Yayinlanmis veya yayindaki kart tekrar kuyruga alinamaz.");
+  }
+
+  const now = new Date();
   return prisma.contentCard.update({
     where: { id },
     data: {
-      status: ContentStatus.SCHEDULED,
-      nextAttemptAt: new Date(),
-      errorCode: null,
-      errorMessage: null,
-      retryCount: 0
+      ...scheduledQueueData(now),
+      nextAttemptAt: now,
+      scheduledAt: now
     }
   });
 }
@@ -235,14 +277,28 @@ export async function deleteContentCard(id: string) {
 
 /** Manuel kontrol gerektiren karti normal kuyruga geri alir. */
 export async function resolveManualCheck(id: string, requeue: boolean) {
+  if (!requeue) {
+    return prisma.contentCard.update({
+      where: { id },
+      data: {
+        manualCheckReason: null,
+        nextAttemptAt: null,
+        scheduledAt: null,
+        status: ContentStatus.CANCELED
+      }
+    });
+  }
+
+  const card = await prisma.contentCard.findUniqueOrThrow({ where: { id } });
+  const now = new Date();
+  const scheduledAt =
+    card.scheduledAt && card.scheduledAt > now ? card.scheduledAt : now;
+
   return prisma.contentCard.update({
     where: { id },
-    data: requeue
-      ? {
-          status: ContentStatus.SCHEDULED,
-          nextAttemptAt: new Date(),
-          manualCheckReason: null
-        }
-      : { status: ContentStatus.CANCELED, manualCheckReason: null }
+    data: {
+      ...scheduledQueueData(scheduledAt),
+      nextAttemptAt: now
+    }
   });
 }

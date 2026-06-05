@@ -1,6 +1,7 @@
 import { ContentStatus, Platform } from "@prisma/client";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import {
+  bulkScheduleContentCards,
   cancelContentCard,
   createContentCard,
   deleteContentCard,
@@ -18,6 +19,7 @@ import {
   runSchedulerTick
 } from "@/lib/server/scheduler-core";
 import { prisma } from "@/lib/server/prisma";
+import { SCHEDULER_STATE_SETTING_KEY } from "@/lib/server/scheduler-state";
 
 vi.mock("@/lib/server/publish-runner", () => ({
   publishCard: vi.fn()
@@ -84,6 +86,9 @@ async function cleanupTestRows() {
 
   createdCardIds.clear();
   testAccountIds.clear();
+  await prisma.setting.deleteMany({
+    where: { key: SCHEDULER_STATE_SETTING_KEY }
+  });
 }
 
 afterEach(async () => {
@@ -158,6 +163,61 @@ describe("content card integration actions", () => {
     });
     expect(afterDelete).toBeNull();
   });
+
+  it("resets stale queue metadata when scheduling a failed card", async () => {
+    const card = await createScheduledCard({
+      retryCount: 4,
+      scheduledAt: new Date("2026-06-05T08:00:00.000Z"),
+      status: ContentStatus.FAILED
+    });
+    await prisma.contentCard.update({
+      where: { id: card.id },
+      data: {
+        errorCode: "OLD_ERROR",
+        errorMessage: "Old error",
+        externalPostId: "old-post",
+        externalPostUrl: "https://example.com/old-post",
+        manualCheckReason: "Needs review",
+        nextAttemptAt: new Date("2099-01-01T00:00:00.000Z"),
+        publishedAt: new Date("2026-06-05T07:59:00.000Z"),
+        publishingStartedAt: new Date("2026-06-05T07:58:00.000Z")
+      }
+    });
+
+    const scheduledAt = new Date("2026-06-05T09:30:00.000Z");
+    const scheduled = await scheduleContentCard(card.id, scheduledAt);
+
+    expect(scheduled.status).toBe(ContentStatus.SCHEDULED);
+    expect(scheduled.scheduledAt?.toISOString()).toBe(
+      scheduledAt.toISOString()
+    );
+    expect(scheduled.retryCount).toBe(0);
+    expect(scheduled.nextAttemptAt).toBeNull();
+    expect(scheduled.errorCode).toBeNull();
+    expect(scheduled.errorMessage).toBeNull();
+    expect(scheduled.manualCheckReason).toBeNull();
+    expect(scheduled.publishingStartedAt).toBeNull();
+    expect(scheduled.externalPostId).toBeNull();
+    expect(scheduled.externalPostUrl).toBeNull();
+  });
+
+  it("retries a canceled card as a due scheduled card", async () => {
+    const card = await createScheduledCard({
+      scheduledAt: new Date("2026-06-05T08:00:00.000Z"),
+      status: ContentStatus.CANCELED
+    });
+    await prisma.contentCard.update({
+      where: { id: card.id },
+      data: { scheduledAt: null }
+    });
+
+    const retried = await retryContentCard(card.id);
+
+    expect(retried.status).toBe(ContentStatus.SCHEDULED);
+    expect(retried.scheduledAt).toBeInstanceOf(Date);
+    expect(retried.nextAttemptAt).toBeInstanceOf(Date);
+    expect(retried.retryCount).toBe(0);
+  });
 });
 
 describe("scheduler integration flow", () => {
@@ -188,6 +248,48 @@ describe("scheduler integration flow", () => {
     expect(publishCardMock).toHaveBeenCalledOnce();
     expect(stored?.status).toBe(ContentStatus.PUBLISHED);
     expect(stored?.externalPostId).toBe("external-1");
+  });
+
+  it("publishes only due cards after interval bulk scheduling", async () => {
+    const now = new Date("2026-06-05T09:00:00.000Z");
+    const first = await createScheduledCard({
+      scheduledAt: new Date("2026-06-05T07:00:00.000Z"),
+      status: ContentStatus.DRAFT
+    });
+    const second = await createScheduledCard({
+      scheduledAt: new Date("2026-06-05T07:00:00.000Z"),
+      status: ContentStatus.DRAFT
+    });
+    publishCardMock.mockResolvedValue({
+      ok: true,
+      result: {
+        externalPostId: "interval-1",
+        externalPostUrl: "https://x.com/test/status/interval-1",
+        status: "PUBLISHED"
+      }
+    });
+
+    const bulkResult = await bulkScheduleContentCards([
+      { id: first.id, scheduledAt: new Date("2026-06-05T08:59:00.000Z") },
+      { id: second.id, scheduledAt: new Date("2026-06-05T09:30:00.000Z") }
+    ]);
+    const result = await runSchedulerTick({ limit: 10, now });
+    const [storedFirst, storedSecond] = await Promise.all([
+      prisma.contentCard.findUnique({ where: { id: first.id } }),
+      prisma.contentCard.findUnique({ where: { id: second.id } })
+    ]);
+
+    expect(bulkResult.updated).toBe(2);
+    expect(result).toMatchObject({
+      claimed: 1,
+      published: 1
+    });
+    expect(publishCardMock).toHaveBeenCalledOnce();
+    expect(storedFirst?.status).toBe(ContentStatus.PUBLISHED);
+    expect(storedSecond?.status).toBe(ContentStatus.SCHEDULED);
+    expect(storedSecond?.scheduledAt?.toISOString()).toBe(
+      "2026-06-05T09:30:00.000Z"
+    );
   });
 
   it("requeues transient publish errors with exponential backoff", async () => {

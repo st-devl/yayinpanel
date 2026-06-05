@@ -6,7 +6,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "next dev",
     "build": "next build",
     "start": "next start",
     "deploy": "bash scripts/deploy.sh",

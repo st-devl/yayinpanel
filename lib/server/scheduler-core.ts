@@ -1,8 +1,13 @@
 import "server-only";
 
-import { ContentStatus, PublishLogStatus } from "@prisma/client";
+import { ContentStatus, Prisma, PublishLogStatus } from "@prisma/client";
 import { prisma } from "@/lib/server/prisma";
 import { publishCard } from "@/lib/server/publish-runner";
+import {
+  recordSchedulerTickFailure,
+  recordSchedulerTickStart,
+  recordSchedulerTickSuccess
+} from "@/lib/server/scheduler-state";
 import { sendTelegramNotification } from "@/lib/server/telegram";
 
 export const MAX_RETRY_COUNT = 5;
@@ -27,14 +32,28 @@ export type SchedulerTickResult = {
   dryRun: boolean;
 };
 
+export type SchedulerQueueSnapshot = {
+  scheduledCount: number;
+  dueCount: number;
+  retryWaitingCount: number;
+  publishingCount: number;
+  stuckPublishingCount: number;
+  oldestDueAt: Date | null;
+  nextScheduledAt: Date | null;
+};
+
+function dueCardWhere(now: Date): Prisma.ContentCardWhereInput {
+  return {
+    status: ContentStatus.SCHEDULED,
+    scheduledAt: { lte: now },
+    OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }]
+  };
+}
+
 /** Yayina hazir kartlari bulur (scheduledAt<=now, nextAttemptAt<=now veya null). */
 async function findDueCards(now: Date, limit: number) {
   return prisma.contentCard.findMany({
-    where: {
-      status: ContentStatus.SCHEDULED,
-      scheduledAt: { lte: now },
-      OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }]
-    },
+    where: dueCardWhere(now),
     orderBy: { scheduledAt: "asc" },
     take: limit,
     select: {
@@ -55,11 +74,69 @@ async function findDueCards(now: Date, limit: number) {
  */
 async function claimCard(cardId: string, now: Date): Promise<boolean> {
   const result = await prisma.contentCard.updateMany({
-    where: { id: cardId, status: ContentStatus.SCHEDULED },
+    where: { id: cardId, ...dueCardWhere(now) },
     data: { status: ContentStatus.PUBLISHING, publishingStartedAt: now }
   });
 
   return result.count === 1;
+}
+
+export async function getSchedulerQueueSnapshot(
+  now: Date = new Date()
+): Promise<SchedulerQueueSnapshot> {
+  const stuckThreshold = new Date(
+    now.getTime() - STUCK_PUBLISHING_MINUTES * 60_000
+  );
+
+  const [
+    scheduledCount,
+    dueCount,
+    retryWaitingCount,
+    publishingCount,
+    stuckPublishingCount,
+    oldestDue,
+    nextScheduled
+  ] = await Promise.all([
+    prisma.contentCard.count({ where: { status: ContentStatus.SCHEDULED } }),
+    prisma.contentCard.count({ where: dueCardWhere(now) }),
+    prisma.contentCard.count({
+      where: {
+        status: ContentStatus.SCHEDULED,
+        scheduledAt: { lte: now },
+        nextAttemptAt: { gt: now }
+      }
+    }),
+    prisma.contentCard.count({ where: { status: ContentStatus.PUBLISHING } }),
+    prisma.contentCard.count({
+      where: {
+        status: ContentStatus.PUBLISHING,
+        publishingStartedAt: { lte: stuckThreshold }
+      }
+    }),
+    prisma.contentCard.findFirst({
+      orderBy: { scheduledAt: "asc" },
+      select: { scheduledAt: true },
+      where: dueCardWhere(now)
+    }),
+    prisma.contentCard.findFirst({
+      orderBy: { scheduledAt: "asc" },
+      select: { scheduledAt: true },
+      where: {
+        status: ContentStatus.SCHEDULED,
+        scheduledAt: { gt: now }
+      }
+    })
+  ]);
+
+  return {
+    dueCount,
+    nextScheduledAt: nextScheduled?.scheduledAt ?? null,
+    oldestDueAt: oldestDue?.scheduledAt ?? null,
+    publishingCount,
+    retryWaitingCount,
+    scheduledCount,
+    stuckPublishingCount
+  };
 }
 
 /** Uzun sure PUBLISHING kalan kartlari MANUAL_CHECK_REQUIRED yapar. */
@@ -108,94 +185,128 @@ export async function runSchedulerTick(options?: {
   dryRun?: boolean;
   now?: Date;
   limit?: number;
+  recordState?: boolean;
 }): Promise<SchedulerTickResult> {
   const dryRun = options?.dryRun ?? false;
   const now = options?.now ?? new Date();
   const limit = options?.limit ?? 20;
+  const shouldRecordState = options?.recordState ?? !dryRun;
 
-  const result: SchedulerTickResult = {
-    claimed: 0,
-    published: 0,
-    retried: 0,
-    failed: 0,
-    manualCheck: 0,
-    dryRun
-  };
-
-  result.manualCheck = dryRun ? 0 : await reclaimStuckCards(now);
-
-  const dueCards = await findDueCards(now, limit);
-
-  if (dryRun) {
-    result.claimed = dueCards.length;
-    return result;
+  if (shouldRecordState) {
+    await safeRecordSchedulerState(() => recordSchedulerTickStart(now));
   }
 
-  for (const card of dueCards) {
-    const claimed = await claimCard(card.id, now);
+  try {
+    const result: SchedulerTickResult = {
+      claimed: 0,
+      dryRun,
+      failed: 0,
+      manualCheck: 0,
+      published: 0,
+      retried: 0
+    };
 
-    if (!claimed) {
-      continue;
-    }
+    result.manualCheck = dryRun ? 0 : await reclaimStuckCards(now);
 
-    result.claimed += 1;
-    const outcome = await publishCard(card);
+    const dueCards = await findDueCards(now, limit);
 
-    if (outcome.ok) {
-      await prisma.contentCard.update({
-        where: { id: card.id },
-        data: {
-          status: ContentStatus.PUBLISHED,
-          publishedAt: new Date(),
-          externalPostId: outcome.result.externalPostId,
-          externalPostUrl: outcome.result.externalPostUrl,
-          errorCode: null,
-          errorMessage: null,
-          manualCheckReason: null
-        }
-      });
-      result.published += 1;
-      continue;
-    }
-
-    const error = outcome.error;
-
-    if (error.isTransient && card.retryCount + 1 < MAX_RETRY_COUNT) {
-      const nextRetry = card.retryCount + 1;
-      const backoff = computeBackoffSeconds(nextRetry);
-      await prisma.contentCard.update({
-        where: { id: card.id },
-        data: {
-          status: ContentStatus.SCHEDULED,
-          retryCount: nextRetry,
-          nextAttemptAt: new Date(now.getTime() + backoff * 1000),
-          errorCode: error.code,
-          errorMessage: error.message
-        }
-      });
-      result.retried += 1;
-      continue;
-    }
-
-    // Kalici hata veya retry tukendi -> FAILED + Telegram.
-    await prisma.contentCard.update({
-      where: { id: card.id },
-      data: {
-        status: ContentStatus.FAILED,
-        errorCode: error.code,
-        errorMessage: error.message
+    if (dryRun) {
+      result.claimed = dueCards.length;
+      if (shouldRecordState) {
+        await safeRecordSchedulerState(() =>
+          recordSchedulerTickSuccess(result, new Date())
+        );
       }
-    });
-    result.failed += 1;
+      return result;
+    }
 
-    await sendTelegramNotification({
-      kind: error.isTransient ? "RETRY_EXHAUSTED" : "PUBLISH_FAILED",
-      detail: `Kart ${card.id} yayinlanamadi: ${error.message}`,
-      action: publishFailureAction(error)
-    });
+    for (const card of dueCards) {
+      const claimed = await claimCard(card.id, now);
+
+      if (!claimed) {
+        continue;
+      }
+
+      result.claimed += 1;
+      const outcome = await publishCard(card);
+
+      if (outcome.ok) {
+        await prisma.contentCard.update({
+          where: { id: card.id },
+          data: {
+            errorCode: null,
+            errorMessage: null,
+            externalPostId: outcome.result.externalPostId,
+            externalPostUrl: outcome.result.externalPostUrl,
+            manualCheckReason: null,
+            publishedAt: new Date(),
+            status: ContentStatus.PUBLISHED
+          }
+        });
+        result.published += 1;
+        continue;
+      }
+
+      const error = outcome.error;
+
+      if (error.isTransient && card.retryCount + 1 < MAX_RETRY_COUNT) {
+        const nextRetry = card.retryCount + 1;
+        const backoff = computeBackoffSeconds(nextRetry);
+        await prisma.contentCard.update({
+          where: { id: card.id },
+          data: {
+            errorCode: error.code,
+            errorMessage: error.message,
+            nextAttemptAt: new Date(now.getTime() + backoff * 1000),
+            retryCount: nextRetry,
+            status: ContentStatus.SCHEDULED
+          }
+        });
+        result.retried += 1;
+        continue;
+      }
+
+      // Kalici hata veya retry tukendi -> FAILED + Telegram.
+      await prisma.contentCard.update({
+        where: { id: card.id },
+        data: {
+          errorCode: error.code,
+          errorMessage: error.message,
+          status: ContentStatus.FAILED
+        }
+      });
+      result.failed += 1;
+
+      await sendTelegramNotification({
+        action: publishFailureAction(error),
+        detail: `Kart ${card.id} yayinlanamadi: ${error.message}`,
+        kind: error.isTransient ? "RETRY_EXHAUSTED" : "PUBLISH_FAILED"
+      });
+    }
+
+    if (shouldRecordState) {
+      await safeRecordSchedulerState(() =>
+        recordSchedulerTickSuccess(result, new Date())
+      );
+    }
+
+    return result;
+  } catch (error) {
+    if (shouldRecordState) {
+      await safeRecordSchedulerState(() =>
+        recordSchedulerTickFailure(error, new Date())
+      );
+    }
+    throw error;
   }
+}
 
-  return result;
+async function safeRecordSchedulerState(operation: () => Promise<void>) {
+  try {
+    await operation();
+  } catch (error) {
+    console.error("[scheduler] state write failed", error);
+  }
 }
 
 function publishFailureAction(error: {

@@ -28,7 +28,14 @@ Local web adresi varsayilan olarak:
 http://localhost:3000
 ```
 
-Scheduler web processinden ayridir ve ikinci terminalde calismalidir:
+`npm run dev` gelistirme ortaminda web process'i ve scheduler process'ini
+birlikte baslatir. Yalniz web sunucusu gerekiyorsa:
+
+```bash
+npm run dev:web
+```
+
+Production'da scheduler web processinden ayridir:
 
 ```bash
 npm run scheduler
@@ -51,7 +58,8 @@ yayinlanabilecek yakin tarihli sahte kart uretilmez.
 
 | Komut                    | Aciklama                                     |
 | ------------------------ | -------------------------------------------- |
-| `npm run dev`            | Gelistirme sunucusu                          |
+| `npm run dev`            | Gelistirme web + scheduler processleri       |
+| `npm run dev:web`        | Sadece gelistirme web sunucusu               |
 | `npm run build`          | Production build                             |
 | `npm run start`          | Production web process                       |
 | `npm run scheduler`      | Dakikalik polling yapan bagimsiz scheduler   |
@@ -78,6 +86,8 @@ Tasarim karsilastirma komutu calisan bir web sunucusu bekler. Raporlar
 - Publisher katmani Instagram, X ve WordPress icin ortak arayuz kullanir.
 - Scheduler Next.js icinde `setInterval` kullanmaz; ayri Node process olarak
   atomik claim, retry/backoff, manual-check ve Telegram bildirimlerini yonetir.
+- `/api/system/scheduler/tick` endpoint'i admin oturumu veya
+  `SCHEDULER_SECRET` ile yetkilendirilmis cron tarafindan tetiklenebilir.
 
 ## Docker
 
@@ -132,8 +142,6 @@ Scriptler 14 gunden eski kendi yedeklerini temizler. `.env` ve
 - Scheduler sorgulari status ve tarih indexleri uzerinden calisir.
 - Medya binaryleri API uzerinden kisitli cache headerlariyla servis edilir.
 - Yakin donem buyumede SQLite yerine PostgreSQL'e gecis degerlendirilmelidir.
-
-
 
 Mac’te: npm run deploy
 SSH ile sunucudaysan: cd /opt/patlat && git pull --ff-only && docker compose up -d --build

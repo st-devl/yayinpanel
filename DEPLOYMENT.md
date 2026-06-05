@@ -22,6 +22,8 @@ Kritik değerler:
 - `APP_BASE_URL`: uygulamanın **dışarıdan erişilen** tam URL'i
   (örn. `https://panel.ornek.com`). Instagram signed media URL'leri ve
   OAuth dönüşleri bu değere göre üretilir; yanlışsa Instagram yayını başarısız olur.
+- `SCHEDULER_SECRET`: Sistem cron'u `/api/system/scheduler/tick` endpoint'ini
+  çağıracaksa güçlü, rastgele bir değer olarak doldurun.
 
 ---
 
@@ -55,6 +57,7 @@ docker compose logs -f   # logları izle
 ```
 
 İki container çalışacak:
+
 - `patlat-web` — Next.js web uygulaması (port 3000, sadece localhost)
 - `patlat-scheduler` — Dakikalık yayın zamanlayıcısı (web healthy olduktan sonra başlar)
 
@@ -189,6 +192,24 @@ Scheduler dry-run testi:
 npm run scheduler:dry
 ```
 
+### 4.4. Cron ile Scheduler Fallback
+
+Ayrı scheduler process kullanmak tercih edilir. Ek güvence veya process
+yöneticisi olmayan kurulumlar için sistem cron'u her dakika güvenli scheduler
+endpoint'ini çağırabilir.
+
+`.env` içinde `SCHEDULER_SECRET` dolu olmalıdır:
+
+```bash
+openssl rand -hex 32
+```
+
+Cron örneği:
+
+```cron
+* * * * * curl -fsS -X POST https://panel.ornek.com/api/system/scheduler/tick -H "Authorization: Bearer SCHEDULER_SECRET_DEGERI" >/dev/null
+```
+
 ---
 
 ## 5. Yedekleme
@@ -237,6 +258,10 @@ docker compose logs scheduler
 ```bash
 docker compose exec web npm run scheduler:dry
 ```
+
+Panelde **Ayarlar > Sistem Durumu** bölümünden scheduler sağlığını ve zamanı
+gelmiş kart sayısını kontrol edin. Gerekirse **Scheduler'ı Çalıştır** butonu
+tek seferlik tick çalıştırır.
 
 ### Veritabanı migration hatası
 

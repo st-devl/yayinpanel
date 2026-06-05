@@ -16,6 +16,7 @@ const envSchema = z.object({
   X_CLIENT_SECRET: z.string().optional().default(""),
   X_API_KEY: z.string().optional().default(""),
   X_API_SECRET: z.string().optional().default(""),
+  SCHEDULER_SECRET: z.string().optional().default(""),
   TELEGRAM_BOT_TOKEN: z.string().optional().default(""),
   TELEGRAM_CHAT_ID: z.string().optional().default("")
 });
@@ -38,6 +39,8 @@ const envHints: Record<keyof AppEnv, string> = {
   X_CLIENT_SECRET: "Set X_CLIENT_SECRET when X OAuth integration is enabled.",
   X_API_KEY: "Set X_API_KEY when X API integration is enabled.",
   X_API_SECRET: "Set X_API_SECRET when X API integration is enabled.",
+  SCHEDULER_SECRET:
+    "Set SCHEDULER_SECRET to allow system cron to trigger scheduler ticks.",
   TELEGRAM_BOT_TOKEN:
     "Set TELEGRAM_BOT_TOKEN when Telegram notifications are enabled.",
   TELEGRAM_CHAT_ID:

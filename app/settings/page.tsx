@@ -11,7 +11,13 @@ type SettingKey =
   | "BACKUP_PATH"
   | "TELEGRAM_ENABLED";
 
-type AIProviderType = "OPENAI" | "ANTHROPIC" | "GOOGLE" | "XAI" | "GROQ" | "CUSTOM";
+type AIProviderType =
+  | "OPENAI"
+  | "ANTHROPIC"
+  | "GOOGLE"
+  | "XAI"
+  | "GROQ"
+  | "CUSTOM";
 
 type AIProvider = {
   id: string;
@@ -42,10 +48,24 @@ const AI_PROVIDER_LABELS: Record<AIProviderType, string> = {
 
 const AI_PROVIDER_MODELS: Record<AIProviderType, string[]> = {
   OPENAI: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
-  ANTHROPIC: ["claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5-20251001"],
-  GOOGLE: ["gemini-2.5-flash-lite", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"],
+  ANTHROPIC: [
+    "claude-sonnet-4-6",
+    "claude-opus-4-8",
+    "claude-haiku-4-5-20251001"
+  ],
+  GOOGLE: [
+    "gemini-2.5-flash-lite",
+    "gemini-1.5-pro",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash"
+  ],
   XAI: ["grok-beta", "grok-vision-beta"],
-  GROQ: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"],
+  GROQ: [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it"
+  ],
   CUSTOM: []
 };
 
@@ -211,6 +231,7 @@ export default function SettingsPage() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [schedulerRunning, setSchedulerRunning] = useState(false);
   const [requestState, setRequestState] = useState<RequestState>(null);
 
   // AI Provider state
@@ -225,7 +246,9 @@ export default function SettingsPage() {
     baseUrl: "",
     isDefault: false
   });
-  const [aiTestResults, setAITestResults] = useState<Record<string, string>>({});
+  const [aiTestResults, setAITestResults] = useState<Record<string, string>>(
+    {}
+  );
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null);
 
   // X / Twitter API state
@@ -368,12 +391,17 @@ export default function SettingsPage() {
       setXOAuth(payload.data);
       setXClientId("");
       setXClientSecret("");
-      setRequestState({ tone: "success", message: "X API bilgileri kaydedildi." });
+      setRequestState({
+        tone: "success",
+        message: "X API bilgileri kaydedildi."
+      });
     } catch (error) {
       setRequestState({
         tone: "error",
         message:
-          error instanceof Error ? error.message : "X API bilgileri kaydedilemedi."
+          error instanceof Error
+            ? error.message
+            : "X API bilgileri kaydedilemedi."
       });
     } finally {
       setXSaving(false);
@@ -396,6 +424,50 @@ export default function SettingsPage() {
     }
 
     setSystemStatus(payload.data ?? null);
+  }
+
+  async function runSchedulerNow() {
+    setSchedulerRunning(true);
+    setRequestState(null);
+
+    try {
+      const response = await fetch("/api/system/scheduler/tick", {
+        body: JSON.stringify({}),
+        headers: { "Content-Type": "application/json" },
+        method: "POST"
+      });
+      const payload = (await response.json()) as {
+        data?: {
+          result?: {
+            claimed: number;
+            published: number;
+            retried: number;
+            failed: number;
+            manualCheck: number;
+          };
+        };
+        error?: string;
+      };
+
+      if (!response.ok || !payload.data?.result) {
+        throw new Error(payload.error ?? "Scheduler çalıştırılamadı.");
+      }
+
+      const result = payload.data.result;
+      await refreshSystemStatus();
+      setRequestState({
+        tone: "success",
+        message: `Scheduler çalıştı: ${result.claimed} kart alındı, ${result.published} yayınlandı, ${result.retried} tekrarlandı, ${result.failed} hata, ${result.manualCheck} manuel kontrol.`
+      });
+    } catch (error) {
+      setRequestState({
+        tone: "error",
+        message:
+          error instanceof Error ? error.message : "Scheduler çalıştırılamadı."
+      });
+    } finally {
+      setSchedulerRunning(false);
+    }
   }
 
   async function loadAIProviders() {
@@ -437,11 +509,21 @@ export default function SettingsPage() {
         })
       });
 
-      const payload = (await res.json()) as { data?: AIProvider; error?: string };
+      const payload = (await res.json()) as {
+        data?: AIProvider;
+        error?: string;
+      };
 
       if (!res.ok) throw new Error(payload.error ?? "Sağlayıcı eklenemedi.");
 
-      setAIForm({ name: "", providerType: "OPENAI", apiKey: "", model: "gpt-4o", baseUrl: "", isDefault: false });
+      setAIForm({
+        name: "",
+        providerType: "OPENAI",
+        apiKey: "",
+        model: "gpt-4o",
+        baseUrl: "",
+        isDefault: false
+      });
       await loadAIProviders();
     } catch (err) {
       setAIError(err instanceof Error ? err.message : "Hata.");
@@ -453,7 +535,10 @@ export default function SettingsPage() {
 
     try {
       const res = await fetch(`/api/ai/providers/${id}`, { method: "DELETE" });
-      const payload = (await res.json()) as { deleted?: boolean; error?: string };
+      const payload = (await res.json()) as {
+        deleted?: boolean;
+        error?: string;
+      };
 
       if (!res.ok) {
         throw new Error(payload.error ?? "Sağlayıcı silinemedi.");
@@ -474,11 +559,19 @@ export default function SettingsPage() {
     setAITestResults((prev) => ({ ...prev, [id]: "test_running" }));
 
     try {
-      const res = await fetch(`/api/ai/providers/${id}/test`, { method: "POST" });
-      const payload = (await res.json()) as { ok?: boolean; error?: string; model?: string };
+      const res = await fetch(`/api/ai/providers/${id}/test`, {
+        method: "POST"
+      });
+      const payload = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        model?: string;
+      };
       setAITestResults((prev) => ({
         ...prev,
-        [id]: payload.ok ? `Bağlantı başarılı · ${payload.model}` : (payload.error ?? "Bağlantı başarısız")
+        [id]: payload.ok
+          ? `Bağlantı başarılı · ${payload.model}`
+          : (payload.error ?? "Bağlantı başarısız")
       }));
     } catch {
       setAITestResults((prev) => ({ ...prev, [id]: "Bağlantı hatası" }));
@@ -628,7 +721,8 @@ export default function SettingsPage() {
             </StatusBadge>
             {xOAuth && xOAuth.source !== "none" ? (
               <StatusBadge tone="info">
-                Kaynak: {xOAuth.source === "database" ? "Panel" : "Sunucu (.env)"}
+                Kaynak:{" "}
+                {xOAuth.source === "database" ? "Panel" : "Sunucu (.env)"}
               </StatusBadge>
             ) : null}
           </div>
@@ -650,13 +744,16 @@ export default function SettingsPage() {
           >
             <label className="flex flex-col gap-xs">
               <span className="font-label-sm text-label-sm text-on-surface-variant">
-                Client ID {xOAuth?.clientIdSet ? "(değiştirmek için doldur)" : ""}
+                Client ID{" "}
+                {xOAuth?.clientIdSet ? "(değiştirmek için doldur)" : ""}
               </span>
               <input
                 className="input-surface w-full rounded-lg px-3 py-2 font-body-md text-body-md"
                 type="text"
                 autoComplete="off"
-                placeholder={xOAuth?.clientIdSet ? "•••• kayıtlı ••••" : "X Client ID"}
+                placeholder={
+                  xOAuth?.clientIdSet ? "•••• kayıtlı ••••" : "X Client ID"
+                }
                 value={xClientId}
                 onChange={(event) => setXClientId(event.target.value)}
               />
@@ -671,13 +768,15 @@ export default function SettingsPage() {
                 type="password"
                 autoComplete="off"
                 placeholder={
-                  xOAuth?.clientSecretSet ? "•••• kayıtlı ••••" : "X Client Secret"
+                  xOAuth?.clientSecretSet
+                    ? "•••• kayıtlı ••••"
+                    : "X Client Secret"
                 }
                 value={xClientSecret}
                 onChange={(event) => setXClientSecret(event.target.value)}
               />
             </label>
-            <div className="md:col-span-2 flex justify-end">
+            <div className="flex justify-end md:col-span-2">
               <button
                 className="primary-button px-md py-sm font-label-md text-label-md disabled:cursor-not-allowed disabled:opacity-60"
                 type="submit"
@@ -730,6 +829,18 @@ export default function SettingsPage() {
             >
               <MaterialIcon name="refresh" size={18} />
               Yenile
+            </button>
+            <button
+              className="primary-button px-md py-sm font-label-md text-label-md disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={schedulerRunning}
+              type="button"
+              onClick={runSchedulerNow}
+            >
+              <MaterialIcon
+                name={schedulerRunning ? "progress_activity" : "play_arrow"}
+                size={18}
+              />
+              {schedulerRunning ? "Çalışıyor" : "Scheduler'ı Çalıştır"}
             </button>
           </div>
 
@@ -950,7 +1061,9 @@ export default function SettingsPage() {
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-xs">
-                      <span className="font-label-md text-label-md">{p.name}</span>
+                      <span className="font-label-md text-label-md">
+                        {p.name}
+                      </span>
                       {p.isDefault && (
                         <StatusBadge tone="success">Varsayılan</StatusBadge>
                       )}
@@ -1022,7 +1135,9 @@ export default function SettingsPage() {
                   className="input-surface w-full rounded-lg px-3 py-2 font-body-sm text-body-sm"
                   placeholder="Örn: ChatGPT Pro"
                   value={aiForm.name}
-                  onChange={(e) => setAIForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) =>
+                    setAIForm((f) => ({ ...f, name: e.target.value }))
+                  }
                   required
                 />
               </label>
@@ -1058,10 +1173,14 @@ export default function SettingsPage() {
                   <select
                     className="input-surface w-full rounded-lg px-3 py-2 font-body-sm text-body-sm"
                     value={aiForm.model}
-                    onChange={(e) => setAIForm((f) => ({ ...f, model: e.target.value }))}
+                    onChange={(e) =>
+                      setAIForm((f) => ({ ...f, model: e.target.value }))
+                    }
                   >
                     {AI_PROVIDER_MODELS[aiForm.providerType].map((m) => (
-                      <option key={m} value={m}>{m}</option>
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
                     ))}
                   </select>
                 ) : (
@@ -1070,7 +1189,9 @@ export default function SettingsPage() {
                     className="input-surface w-full rounded-lg px-3 py-2 font-body-sm text-body-sm"
                     placeholder="model-adı"
                     value={aiForm.model}
-                    onChange={(e) => setAIForm((f) => ({ ...f, model: e.target.value }))}
+                    onChange={(e) =>
+                      setAIForm((f) => ({ ...f, model: e.target.value }))
+                    }
                     required
                   />
                 )}
@@ -1084,7 +1205,9 @@ export default function SettingsPage() {
                   className="input-surface w-full rounded-lg px-3 py-2 font-body-sm text-body-sm"
                   placeholder="sk-..."
                   value={aiForm.apiKey}
-                  onChange={(e) => setAIForm((f) => ({ ...f, apiKey: e.target.value }))}
+                  onChange={(e) =>
+                    setAIForm((f) => ({ ...f, apiKey: e.target.value }))
+                  }
                   required
                 />
               </label>
@@ -1099,7 +1222,9 @@ export default function SettingsPage() {
                   className="input-surface w-full rounded-lg px-3 py-2 font-body-sm text-body-sm"
                   placeholder="https://api.example.com"
                   value={aiForm.baseUrl}
-                  onChange={(e) => setAIForm((f) => ({ ...f, baseUrl: e.target.value }))}
+                  onChange={(e) =>
+                    setAIForm((f) => ({ ...f, baseUrl: e.target.value }))
+                  }
                 />
               </label>
             )}
@@ -1108,7 +1233,9 @@ export default function SettingsPage() {
                 <input
                   type="checkbox"
                   checked={aiForm.isDefault}
-                  onChange={(e) => setAIForm((f) => ({ ...f, isDefault: e.target.checked }))}
+                  onChange={(e) =>
+                    setAIForm((f) => ({ ...f, isDefault: e.target.checked }))
+                  }
                 />
                 Varsayılan sağlayıcı olarak ayarla
               </label>
@@ -1135,10 +1262,22 @@ export default function SettingsPage() {
             </div>
             <div className="grid grid-cols-2 gap-sm md:grid-cols-4">
               {[
-                { label: "Giriş Token", value: usageSummary.totalInputTokens.toLocaleString("tr") },
-                { label: "Çıkış Token", value: usageSummary.totalOutputTokens.toLocaleString("tr") },
-                { label: "Tahmini Maliyet", value: `$${usageSummary.totalCostUsd.toFixed(4)}` },
-                { label: "İstek Sayısı", value: String(usageSummary.requestCount) }
+                {
+                  label: "Giriş Token",
+                  value: usageSummary.totalInputTokens.toLocaleString("tr")
+                },
+                {
+                  label: "Çıkış Token",
+                  value: usageSummary.totalOutputTokens.toLocaleString("tr")
+                },
+                {
+                  label: "Tahmini Maliyet",
+                  value: `$${usageSummary.totalCostUsd.toFixed(4)}`
+                },
+                {
+                  label: "İstek Sayısı",
+                  value: String(usageSummary.requestCount)
+                }
               ].map(({ label, value }) => (
                 <div
                   key={label}

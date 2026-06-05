@@ -5,6 +5,11 @@ import path from "path";
 import { getEnv } from "@/lib/server/env";
 import { getAllSettings } from "@/lib/server/settings";
 import { prisma } from "@/lib/server/prisma";
+import { getSchedulerQueueSnapshot } from "@/lib/server/scheduler-core";
+import {
+  readSchedulerState,
+  type SchedulerState
+} from "@/lib/server/scheduler-state";
 
 type StatusTone = "success" | "warning" | "error" | "info" | "neutral";
 
@@ -168,7 +173,77 @@ function healthItem(
   return { description, icon, title, tone, value };
 }
 
+function schedulerHealthItem(
+  state: SchedulerState | null,
+  queue: Awaited<ReturnType<typeof getSchedulerQueueSnapshot>>,
+  now: Date
+) {
+  const lastSuccessAt = state?.lastSuccessAt
+    ? new Date(state.lastSuccessAt)
+    : null;
+  const lastErrorAt = state?.lastErrorAt ? new Date(state.lastErrorAt) : null;
+  const lastSuccessAgeMs = lastSuccessAt
+    ? now.getTime() - lastSuccessAt.getTime()
+    : Number.POSITIVE_INFINITY;
+  const isStale = lastSuccessAgeMs > 3 * 60_000;
+  const hasNewerError =
+    lastErrorAt && (!lastSuccessAt || lastErrorAt > lastSuccessAt);
+  const lastSuccessLabel = lastSuccessAt
+    ? lastSuccessAt.toISOString()
+    : "henüz yok";
+  const queueSummary = `Planli: ${queue.scheduledCount}, zamani gelen: ${queue.dueCount}, retry bekleyen: ${queue.retryWaitingCount}, yayinda: ${queue.publishingCount}.`;
+
+  if (hasNewerError) {
+    return healthItem(
+      "Scheduler",
+      "Hata Var",
+      `Son hata: ${state?.lastErrorMessage ?? "Bilinmeyen hata"}. ${queueSummary}`,
+      "timer",
+      "error"
+    );
+  }
+
+  if (!lastSuccessAt) {
+    return healthItem(
+      "Scheduler",
+      "Tetiklenmedi",
+      `Henüz başarılı scheduler tick kaydı yok. ${queueSummary}`,
+      "timer",
+      queue.dueCount > 0 ? "error" : "warning"
+    );
+  }
+
+  if (queue.dueCount > 0 && isStale) {
+    return healthItem(
+      "Scheduler",
+      "Gecikiyor",
+      `Son başarılı tick: ${lastSuccessLabel}. ${queueSummary}`,
+      "timer",
+      "error"
+    );
+  }
+
+  if (isStale) {
+    return healthItem(
+      "Scheduler",
+      "Bayat",
+      `Son başarılı tick: ${lastSuccessLabel}. ${queueSummary}`,
+      "timer",
+      "warning"
+    );
+  }
+
+  return healthItem(
+    "Scheduler",
+    "Aktif",
+    `Son başarılı tick: ${lastSuccessLabel}. ${queueSummary}`,
+    "timer",
+    queue.stuckPublishingCount > 0 ? "warning" : "success"
+  );
+}
+
 export async function getSystemStatus() {
+  const now = new Date();
   const env = getEnv();
   const settings = await getAllSettings();
   const backupDirectory = await getDirectoryInfo(settings.BACKUP_PATH);
@@ -192,12 +267,16 @@ export async function getSystemStatus() {
     contentCardCount,
     scheduledCardCount,
     mediaFileCount,
-    publishLogCount
+    publishLogCount,
+    schedulerState,
+    schedulerQueue
   ] = await Promise.all([
     prisma.contentCard.count(),
     prisma.contentCard.count({ where: { status: "SCHEDULED" } }),
     prisma.mediaFile.count(),
-    prisma.publishLog.count()
+    prisma.publishLog.count(),
+    readSchedulerState(),
+    getSchedulerQueueSnapshot(now)
   ]);
 
   const telegramEnabled = settings.TELEGRAM_ENABLED === "true";
@@ -270,13 +349,7 @@ export async function getSystemStatus() {
             : "error"
           : "warning"
       ),
-      healthItem(
-        "Scheduler",
-        "Ayrı Process",
-        "Durum doğrulaması için npm run scheduler:dry komutu kullanılmalı.",
-        "timer",
-        "info"
-      ),
+      schedulerHealthItem(schedulerState, schedulerQueue, now),
       healthItem(
         "Telegram",
         telegramEnabled
@@ -295,6 +368,10 @@ export async function getSystemStatus() {
           : "neutral"
       )
     ],
+    scheduler: {
+      queue: schedulerQueue,
+      state: schedulerState
+    },
     settings
   };
 }
