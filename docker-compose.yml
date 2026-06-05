@@ -1,0 +1,61 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: patlat-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      DATABASE_URL: file:/app/data/dev.db
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      TIMEZONE: ${TIMEZONE:-Europe/Istanbul}
+      STORAGE_DIR: /app/storage
+    volumes:
+      - patlat-data:/app/data
+      - patlat-storage:/app/storage
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: scheduler
+    container_name: patlat-scheduler
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: file:/app/data/dev.db
+      TIMEZONE: ${TIMEZONE:-Europe/Istanbul}
+      STORAGE_DIR: /app/storage
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+    volumes:
+      - patlat-data:/app/data
+      - patlat-storage:/app/storage
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  patlat-data:
+  patlat-storage:

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+
+<html lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>İçerik Yönetimi - Instagram Paneli</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#d3e4fe",
+                    "surface-container": "#e5eeff",
+                    "outline": "#76777d",
+                    "primary-fixed-dim": "#bec6e0",
+                    "on-tertiary": "#ffffff",
+                    "tertiary": "#000000",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "background": "#f8f9ff",
+                    "on-primary-fixed": "#131b2e",
+                    "surface-container-high": "#dce9ff",
+                    "surface-dim": "#cbdbf5",
+                    "primary": "#000000",
+                    "error-container": "#ffdad6",
+                    "secondary-fixed": "#e0e3e5",
+                    "on-surface-variant": "#45464d",
+                    "on-secondary-fixed": "#191c1e",
+                    "tertiary-fixed": "#d8e3fb",
+                    "secondary-fixed-dim": "#c4c7c9",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#213145",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-tertiary-fixed-variant": "#3c475a",
+                    "on-primary-container": "#7c839b",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed-dim": "#bcc7de",
+                    "on-background": "#0b1c30",
+                    "inverse-on-surface": "#eaf1ff",
+                    "on-secondary": "#ffffff",
+                    "surface-bright": "#f8f9ff",
+                    "on-surface": "#0b1c30",
+                    "tertiary-container": "#111c2d",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-container": "#79849a",
+                    "outline-variant": "#c6c6cd",
+                    "primary-fixed": "#dae2fd",
+                    "on-secondary-fixed-variant": "#444749",
+                    "secondary-container": "#e0e3e5",
+                    "secondary": "#5c5f61",
+                    "inverse-primary": "#bec6e0",
+                    "error": "#ba1a1a",
+                    "on-secondary-container": "#626567",
+                    "primary-container": "#131b2e",
+                    "on-tertiary-fixed": "#111c2d",
+                    "surface-tint": "#565e74",
+                    "surface": "#f8f9ff",
+                    "surface-container-low": "#eff4ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "24px",
+                    "sidebar-width": "280px",
+                    "xl": "64px",
+                    "lg": "40px",
+                    "sm": "12px",
+                    "base": "8px",
+                    "xs": "4px",
+                    "container-max": "1440px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "label-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            user-select: none;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9ff;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background">
+<!-- SideNavBar Shell -->
+<aside class="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-sidebar-width h-screen bg-surface border-r border-outline-variant z-40">
+<div class="px-md py-lg">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">İçerik Yönetimi</h1>
+<p class="text-on-surface-variant font-label-sm text-label-sm mt-1">Profesyonel Ajans Paneli</p>
+</div>
+<nav class="flex-1 overflow-y-auto px-sm">
+<div class="space-y-1">
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">dashboard</span> Kontrol Paneli
+                </a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">link</span> Hesap Bağlantıları
+                </a>
+<!-- Active State -->
+<a class="flex items-center gap-sm bg-secondary-container text-on-secondary-container border-l-4 border-primary px-4 py-3 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">photo_camera</span> Instagram Paneli
+                </a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">share</span> X / Twitter Paneli
+                </a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">web</span> Web Sitesi / Blog Paneli
+                </a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">cloud</span> Ortak İçerik Deposu
+                </a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">inventory_2</span> Medya Kütüphanesi
+                </a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">history</span> Yayın Logları
+                </a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">settings</span> Ayarlar
+                </a>
+</div>
+</nav>
+<div class="p-md border-t border-outline-variant flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-primary-fixed-dim flex items-center justify-center">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Ajans Yöneticisi</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-wider">Premium Üyelik</p>
+</div>
+</div>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="flex justify-between items-center w-full px-lg py-md lg:pl-[300px] bg-surface border-b border-outline-variant fixed top-0 left-0 z-30">
+<div class="flex items-center gap-md">
+<h2 class="font-headline-sm text-headline-sm font-bold text-primary">Instagram Paneli</h2>
+<div class="hidden md:flex bg-surface-container-low px-sm py-xs rounded-full border border-outline-variant items-center gap-xs">
+<span class="material-symbols-outlined text-outline">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-sm w-48" placeholder="İçeriklerde ara..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="hover:bg-surface-container-lowest p-2 rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="hover:bg-surface-container-lowest p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="lg:pl-sidebar-width pt-[80px] pb-[100px] lg:pb-md">
+<div class="px-md lg:px-lg py-md max-w-container-max mx-auto">
+<!-- Warning Banner -->
+<div class="mb-md p-md bg-error-container text-on-error-container rounded-xl flex items-center gap-sm border border-error/20">
+<span class="material-symbols-outlined">warning</span>
+<p class="font-body-md text-body-md"><strong>Dikkat:</strong> Günlük paylaşım limitine yaklaştınız. Instagram politikaları gereği günde en fazla 10 gönderi planlamanız önerilir.</p>
+</div>
+<!-- Account Selector -->
+<section class="mb-md flex flex-col md:flex-row md:items-center justify-between gap-md bg-white p-md rounded-xl border border-outline-variant">
+<div class="flex items-center gap-sm">
+<div class="p-3 bg-surface-container-highest rounded-lg">
+<span class="material-symbols-outlined text-primary">photo_camera</span>
+</div>
+<div>
+<p class="text-label-sm font-label-sm text-on-surface-variant uppercase">Aktif Instagram Hesabı</p>
+<select class="mt-1 font-headline-sm text-headline-sm text-primary bg-transparent border-none p-0 focus:ring-0 cursor-pointer">
+<option>Hisar Adak - @hisaradak</option>
+<option>Mutfak Sanatları - @gastromutfak</option>
+<option>Yolculuk Rehberi - @geziyoruz</option>
+</select>
+</div>
+</div>
+<div class="flex gap-sm">
+<button class="bg-primary text-on-primary px-md py-sm rounded-lg font-label-md text-label-md flex items-center gap-xs hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">add</span> Yeni İçerik Ekle
+                    </button>
+</div>
+</section>
+<!-- Bento Grid Layout -->
+<div class="bento-grid">
+<!-- 1. Toplu Metin Girişi -->
+<div class="col-span-12 lg:col-span-8 bg-white border border-outline-variant rounded-xl p-md flex flex-col">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-headline-sm text-headline-sm text-primary">Toplu Metin Girişi</h3>
+<span class="text-label-sm text-on-surface-variant">Her satırı bir gönderi olarak algılar</span>
+</div>
+<textarea class="flex-1 min-h-[300px] w-full bg-surface-container-low border border-outline-variant rounded-lg p-md font-body-md text-body-md focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none" placeholder="Her bir görsel için metninizi buraya girin. Satır başı yaparak içerikleri ayırabilirsiniz..."></textarea>
+</div>
+<!-- 2. Planlama Alanı (Quick Stats / Control) -->
+<div class="col-span-12 lg:col-span-4 space-y-md">
+<div class="bg-white border border-outline-variant rounded-xl p-md">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-md">Planlama Alanı</h3>
+<div class="space-y-md">
+<div>
+<label class="text-label-sm text-on-surface-variant block mb-1">Başlangıç Tarihi</label>
+<input class="w-full border border-outline-variant rounded-lg p-sm font-body-md focus:ring-primary" type="date"/>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<div>
+<label class="text-label-sm text-on-surface-variant block mb-1">Saat</label>
+<input class="w-full border border-outline-variant rounded-lg p-sm font-body-md focus:ring-primary" type="time"/>
+</div>
+<div>
+<label class="text-label-sm text-on-surface-variant block mb-1">Aralık</label>
+<select class="w-full border border-outline-variant rounded-lg p-sm font-body-md focus:ring-primary">
+<option>Her gün</option>
+<option>2 günde bir</option>
+<option>Haftalık</option>
+</select>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-md rounded-lg font-headline-sm hover:opacity-90 transition-all flex items-center justify-center gap-sm">
+<span class="material-symbols-outlined">schedule</span> Planla
+                            </button>
+</div>
+</div>
+<!-- Analytics Teaser -->
+<div class="bg-surface-container-highest rounded-xl p-md border border-outline-variant">
+<h4 class="font-label-md text-label-md text-primary uppercase mb-base">Hesap Durumu</h4>
+<div class="flex items-end justify-between">
+<div>
+<p class="text-display-lg font-display-lg text-primary">8.4k</p>
+<p class="text-body-sm text-on-surface-variant">Takipçi Etkileşimi</p>
+</div>
+<div class="text-right text-success text-body-sm font-bold flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">trending_up</span> +12%
+                            </div>
+</div>
+</div>
+</div>
+<!-- 3. Toplu Görsel Yükleme -->
+<div class="col-span-12 lg:col-span-6 bg-white border border-outline-variant rounded-xl p-md">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-md">Toplu Görsel Yükleme</h3>
+<div class="border-2 border-dashed border-outline-variant rounded-xl h-64 flex flex-col items-center justify-center bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-outline group-hover:text-primary text-[48px] mb-sm">cloud_upload</span>
+<p class="font-body-md text-on-surface-variant">Görselleri buraya sürükleyin veya <span class="text-primary font-semibold underline">dosya seçin</span></p>
+<p class="text-label-sm text-outline mt-xs">Maksimum 20MB, JPG veya PNG</p>
+</div>
+</div>
+<!-- 4. Görsel Sıralama -->
+<div class="col-span-12 lg:col-span-6 bg-white border border-outline-variant rounded-xl p-md">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-md">Görsel Sıralama</h3>
+<div class="grid grid-cols-4 sm:grid-cols-6 gap-sm">
+<!-- Draggable Thumbnails -->
+<div class="aspect-square bg-surface-container rounded-lg overflow-hidden border border-outline-variant relative group cursor-move">
+<img class="w-full h-full object-cover" data-alt="A high-end commercial photograph of gourmet meat products arranged artfully on a dark stone surface, lit with dramatic top-down lighting to create deep shadows and bright highlights. The style is moody and professional, matching a premium agency content panel. Deep blacks and warm textures dominate the frame." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWzsqTvG3byr-PBEKg8mQnfx4wtnswAHG7VfJVM2x-8OOnNzsOZwmz1_PP7qbxw9_PAQZHgk1_z5p6xLjavRdue3UzFeEN1Xvj2kt96ba75giwpJxtbQ8EvlAfPMDAQr3uk8-2dqqNxSzljXn-3Dxz0_zxOhudw7JeoaXakh6CzJzojf9SVWTr8rA1h2IbB-hTpE4tJOSKLJOsMb3JqzvvXyfpIPCxWsllbTYHeKAWNFvGJ0hi1l31kdLNg3lxBOSiKRyWTM8B41E"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+<span class="material-symbols-outlined text-white">drag_indicator</span>
+</div>
+</div>
+<div class="aspect-square bg-surface-container rounded-lg overflow-hidden border border-outline-variant relative group cursor-move">
+<img class="w-full h-full object-cover" data-alt="A vibrant culinary dish with fresh vegetables and grilled meat, presented on a minimalist white ceramic plate. The lighting is bright and natural, reflecting a clean aesthetic. The composition is centered and modern, ideal for a professional social media marketing dashboard. Soft grays and natural greens provide a balanced color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlAF90Yt7_n94_aoek2wEM4DRDSB6EJuF84wtVD4zauZcJlz5-np1gc-AbHOHPNLQDhlejfGebLiKCBKNA8UXMFpjKMSApb7z8ARVruaZNyylu5HmQsxExzHnOOU6Av0zMtbVUO8NJncKDcq655pncywQQl0bGrq4tlkycnNBnJeQQTOCRHPpmhk0KjVfKECwWw9h8A725kCwn62FGZyQoi-bc47WHcNjv5JSpIjVaQsJSY8CLLOdnyo7hcxJuciA2Ee6CGblWAxY"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+<span class="material-symbols-outlined text-white">drag_indicator</span>
+</div>
+</div>
+<div class="aspect-square bg-surface-container rounded-lg overflow-hidden border border-outline-variant relative group cursor-move">
+<img class="w-full h-full object-cover" data-alt="An elegant restaurant interior with soft ambient lighting, focusing on a perfectly set table with crystal glassware and fine cutlery. The atmosphere is sophisticated and quiet, utilizing a palette of cream, silver, and deep navy. The visual style is high-end editorial photography for an agency portfolio." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUwQ10sOH70NGcC582acC5xDMR3_r_Xbhd9YqugfVwYBmOHx02d8DCGZxDzFhCLLvVeVI7wZYBkiNbkOr8SvNvLXLNbEdFkxE4rukvVDjyBN9Ls29HP9oHpuNIEHbVQIkMr61Mr4gu3gBYGsXCFrXkAGfT3NbBTj0LR51TpCJS5ayurjR_Qna_CTImRh3wXMieVC4qkvd_big0cIea9JHEz9cgxLYHGI779TUHCvB_BrcfIrL-N_2ptzWEZHSHxF5YxhUetT13lrE"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+<span class="material-symbols-outlined text-white">drag_indicator</span>
+</div>
+</div>
+<div class="aspect-square bg-surface-container rounded-lg overflow-hidden border border-outline-variant border-dashed flex items-center justify-center">
+<span class="material-symbols-outlined text-outline">add_photo_alternate</span>
+</div>
+</div>
+<p class="mt-md text-label-sm text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]">info</span> Görselleri sürükleyerek eşleşme sırasını değiştirebilirsiniz.
+                    </p>
+</div>
+<!-- 5. Eşleştirme Önizlemesi -->
+<div class="col-span-12 bg-white border border-outline-variant rounded-xl overflow-hidden">
+<div class="p-md border-b border-outline-variant">
+<h3 class="font-headline-sm text-headline-sm text-primary">Eşleştirme Önizlemesi</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant">
+<tr>
+<th class="px-md py-sm">Sıra #</th>
+<th class="px-md py-sm">Metin Özeti</th>
+<th class="px-md py-sm">Görsel Önizleme</th>
+<th class="px-md py-sm">Durum</th>
+<th class="px-md py-sm text-right">İşlem</th>
+</tr>
+</thead>
+<tbody class="text-body-sm font-body-sm text-on-surface divide-y divide-outline-variant/50">
+<tr>
+<td class="px-md py-sm font-bold">1</td>
+<td class="px-md py-sm">Yeni sezon adak kurbanlarımız gelmiştir...</td>
+<td class="px-md py-sm">
+<div class="w-12 h-12 rounded bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close up of high quality meat cuts for social media marketing." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDn0rOZ-f037PFGVHV6W0-LQBXRIf7GtZbhOf63VMhpvRhBfqhlLxP8LMkId8nQ4NCJkL4IbfGx3OrmCUlY5PD_qaGkndzwzGkXysCYLPSsSnajfvkhY0BkpUDiN2q1YXz7DV2zDa6YzDJq7ifQBN2Ns2TfkBdddiQbGQisdI-UTROurwP_WDtnzKnZbo6VwVuIk5vlMlGxYfVi-8q36uNNrwzKFxLOcNFfK-9DWo-w546Z096Jw2CN3vuqNeZn0qHJd1tAT7Pfl50"/>
+</div>
+</td>
+<td class="px-md py-sm">
+<span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase">Hazır</span>
+</td>
+<td class="px-md py-sm text-right">
+<button class="p-2 hover:bg-surface-container rounded-full text-on-surface-variant">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</td>
+</tr>
+<tr>
+<td class="px-md py-sm font-bold">2</td>
+<td class="px-md py-sm">İslami kurallara uygun kesim ve paketleme...</td>
+<td class="px-md py-sm">
+<div class="w-12 h-12 rounded bg-surface-container flex items-center justify-center border border-dashed border-error/50">
+<span class="material-symbols-outlined text-error">image_not_supported</span>
+</div>
+</td>
+<td class="px-md py-sm">
+<span class="px-2 py-1 bg-error-container text-on-error-container rounded-full text-[10px] font-bold uppercase">Görsel Eksik</span>
+</td>
+<td class="px-md py-sm text-right">
+<button class="p-2 hover:bg-surface-container rounded-full text-on-surface-variant">
+<span class="material-symbols-outlined">file_upload</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar for Mobile -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-2 bg-surface border-t border-outline-variant z-50 lg:hidden shadow-lg">
+<a class="flex flex-col items-center justify-center text-primary-container bg-primary-container/10 rounded-xl p-2 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined">home</span>
+<span>Ana Sayfa</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined">sync</span>
+<span>Hesaplar</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">post_add</span>
+<span>İçerik</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined">perm_media</span>
+<span>Medya</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Ayarlar</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions and simple effects
+        document.querySelectorAll('button, a').forEach(elem => {
+            elem.addEventListener('mousedown', () => {
+                elem.style.transform = 'scale(0.95)';
+            });
+            elem.addEventListener('mouseup', () => {
+                elem.style.transform = 'scale(1)';
+            });
+            elem.addEventListener('mouseleave', () => {
+                elem.style.transform = 'scale(1)';
+            });
+        });
+
+        // Toggle focus state for textarea simulation
+        const textarea = document.querySelector('textarea');
+        if(textarea) {
+            textarea.addEventListener('focus', () => {
+                textarea.parentElement.classList.add('ring-2', 'ring-primary/10');
+            });
+            textarea.addEventListener('blur', () => {
+                textarea.parentElement.classList.remove('ring-2', 'ring-primary/10');
+            });
+        }
+    </script>
+</body></html>

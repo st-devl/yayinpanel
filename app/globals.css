@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    min-height: 100%;
+  }
+
+  body {
+    min-height: 100%;
+    background: #f8f9ff;
+    color: #0b1c30;
+    font-family: var(--font-inter), Inter, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .panel-card {
+    @apply rounded-xl border border-outline-variant bg-surface-container-lowest;
+  }
+
+  .input-surface {
+    @apply border border-outline-variant bg-surface-container-low text-on-surface placeholder:text-outline focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10;
+  }
+
+  .primary-button {
+    @apply inline-flex items-center justify-center gap-sm rounded-lg bg-primary text-on-primary transition-all hover:opacity-90 active:scale-[0.98];
+  }
+
+  .secondary-button {
+    @apply inline-flex items-center justify-center gap-xs rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface transition-colors hover:bg-surface-container;
+  }
+}

@@ -1,0 +1,303 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Platform {
+  INSTAGRAM
+  X
+  WORDPRESS
+  CUSTOM_SITE
+}
+
+enum ContentStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  CANCELED
+  MANUAL_CHECK_REQUIRED
+}
+
+enum ConnectionStatus {
+  CONNECTED
+  NEEDS_RECONNECT
+  TOKEN_EXPIRED
+  PERMISSION_MISSING
+  RATE_LIMITED
+  FAILED
+  DISCONNECTED
+}
+
+enum PublishLogStatus {
+  OK
+  ERROR
+  WARNING
+}
+
+enum AIProviderType {
+  OPENAI
+  ANTHROPIC
+  GOOGLE
+  XAI
+  CUSTOM
+}
+
+enum BatchStatus {
+  UPLOADING
+  PROCESSING
+  REVIEW_PENDING
+  PARTIALLY_APPROVED
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+enum ReviewItemStatus {
+  PENDING
+  PROCESSING
+  READY
+  APPROVED
+  REJECTED
+  EDITED
+  ERROR
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model InstagramAccount {
+  id                         String           @id @default(cuid())
+  accountName                String
+  username                   String
+  instagramBusinessAccountId String
+  facebookPageId             String
+  profileImageUrl            String?
+  accessTokenEncrypted       String
+  tokenExpiresAt             DateTime?
+  connectionStatus           ConnectionStatus @default(DISCONNECTED)
+  lastError                  String?
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+
+  @@index([connectionStatus])
+  @@index([username])
+}
+
+model XAccount {
+  id                    String           @id @default(cuid())
+  accountName           String
+  username              String
+  xUserId               String
+  profileImageUrl       String?
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String?
+  tokenExpiresAt        DateTime?
+  connectionStatus      ConnectionStatus @default(DISCONNECTED)
+  lastError             String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@index([connectionStatus])
+  @@index([username])
+}
+
+model WordPressSite {
+  id                           String           @id @default(cuid())
+  name                         String
+  baseUrl                      String
+  username                     String
+  applicationPasswordEncrypted String
+  connectionStatus             ConnectionStatus @default(DISCONNECTED)
+  lastError                    String?
+  createdAt                    DateTime         @default(now())
+  updatedAt                    DateTime         @updatedAt
+
+  @@index([connectionStatus])
+  @@index([baseUrl])
+}
+
+model CustomSite {
+  id               String           @id @default(cuid())
+  name             String
+  baseUrl          String
+  apiKeyEncrypted  String
+  fieldMappingJson String?
+  connectionStatus ConnectionStatus @default(DISCONNECTED)
+  lastError        String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([connectionStatus])
+  @@index([baseUrl])
+}
+
+model AIProvider {
+  id               String          @id @default(cuid())
+  name             String
+  providerType     AIProviderType
+  apiKeyEncrypted  String
+  model            String
+  baseUrl          String?
+  maxTokens        Int?
+  timeoutSeconds   Int             @default(120)
+  monthlyBudgetUsd Float?
+  isActive         Boolean         @default(true)
+  isDefault        Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  batches          ProcessingBatch[]
+  usageLogs        AIUsageLog[]
+
+  @@index([isDefault])
+  @@index([isActive])
+}
+
+model ProcessingBatch {
+  id              String          @id @default(cuid())
+  platform        Platform
+  accountId       String
+  status          BatchStatus     @default(UPLOADING)
+  aiProviderId    String
+  aiProvider      AIProvider      @relation(fields: [aiProviderId], references: [id])
+  instructionText String?
+  uploadedFileIds String          @default("[]")
+  totalItems      Int             @default(0)
+  approvedItems   Int             @default(0)
+  errorMessage    String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  items           ProcessingItem[]
+
+  @@index([status])
+  @@index([platform, accountId])
+  @@index([createdAt])
+}
+
+model ProcessingItem {
+  id                  String           @id @default(cuid())
+  batchId             String
+  batch               ProcessingBatch  @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  reviewStatus        ReviewItemStatus @default(PENDING)
+  platform            Platform
+  accountId           String
+  contentType         String?
+  proposedPlatformData String          @default("{}")
+  mediaAssignments    String           @default("[]")
+  scheduledAt         DateTime?
+  confidence          Float            @default(0)
+  warnings            String           @default("[]")
+  aiNotes             String?
+  contentCardId       String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@index([batchId])
+  @@index([reviewStatus])
+  @@index([platform, accountId])
+}
+
+model AIUsageLog {
+  id               String     @id @default(cuid())
+  aiProviderId     String
+  aiProvider       AIProvider @relation(fields: [aiProviderId], references: [id])
+  batchId          String?
+  model            String
+  inputTokens      Int
+  outputTokens     Int
+  estimatedCostUsd Float?
+  purpose          String
+  createdAt        DateTime   @default(now())
+
+  @@index([aiProviderId])
+  @@index([batchId])
+  @@index([createdAt])
+}
+
+model MediaFile {
+  id               String        @id @default(cuid())
+  fileName         String
+  originalFileName String
+  mimeType         String
+  fileSize         Int
+  width            Int?
+  height           Int?
+  storageType      String        @default("LOCAL")
+  storagePath      String
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  contentCards     ContentCard[]
+
+  @@index([mimeType])
+  @@index([createdAt])
+}
+
+model ContentCard {
+  id                   String        @id @default(cuid())
+  platform             Platform
+  accountType          String
+  accountId            String
+  mediaFileId          String?
+  mediaFile            MediaFile?    @relation(fields: [mediaFileId], references: [id], onDelete: SetNull)
+  text                 String?
+  status               ContentStatus @default(DRAFT)
+  orderNumber          Int?
+  scheduledAt          DateTime?
+  nextAttemptAt        DateTime?
+  publishedAt          DateTime?
+  externalPostId       String?
+  externalPostUrl      String?
+  platformData         String
+  errorCode            String?
+  errorMessage         String?
+  retryCount           Int           @default(0)
+  publishingStartedAt  DateTime?
+  manualCheckReason    String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  logs                 PublishLog[]
+
+  @@index([platform, accountId])
+  @@index([status, scheduledAt])
+  @@index([status, publishingStartedAt])
+  @@index([mediaFileId])
+  @@index([createdAt])
+}
+
+model PublishLog {
+  id            String           @id @default(cuid())
+  platform      Platform
+  accountId     String?
+  contentCardId String?
+  contentCard   ContentCard?     @relation(fields: [contentCardId], references: [id], onDelete: SetNull)
+  action        String
+  status        PublishLogStatus
+  apiResponse   String?
+  errorCode     String?
+  errorMessage  String?
+  createdAt     DateTime         @default(now())
+
+  @@index([platform, accountId])
+  @@index([contentCardId])
+  @@index([status, createdAt])
+  @@index([action])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

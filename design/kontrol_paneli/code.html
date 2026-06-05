@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kontrol Paneli | İçerik Yönetimi</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#d3e4fe",
+                    "surface-container": "#e5eeff",
+                    "outline": "#76777d",
+                    "primary-fixed-dim": "#bec6e0",
+                    "on-tertiary": "#ffffff",
+                    "tertiary": "#000000",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "background": "#f8f9ff",
+                    "on-primary-fixed": "#131b2e",
+                    "surface-container-high": "#dce9ff",
+                    "surface-dim": "#cbdbf5",
+                    "primary": "#000000",
+                    "error-container": "#ffdad6",
+                    "secondary-fixed": "#e0e3e5",
+                    "on-surface-variant": "#45464d",
+                    "on-secondary-fixed": "#191c1e",
+                    "tertiary-fixed": "#d8e3fb",
+                    "secondary-fixed-dim": "#c4c7c9",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#213145",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-tertiary-fixed-variant": "#3c475a",
+                    "on-primary-container": "#7c839b",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed-dim": "#bcc7de",
+                    "on-background": "#0b1c30",
+                    "inverse-on-surface": "#eaf1ff",
+                    "on-secondary": "#ffffff",
+                    "surface-bright": "#f8f9ff",
+                    "on-surface": "#0b1c30",
+                    "tertiary-container": "#111c2d",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-container": "#79849a",
+                    "outline-variant": "#c6c6cd",
+                    "primary-fixed": "#dae2fd",
+                    "on-secondary-fixed-variant": "#444749",
+                    "secondary-container": "#e0e3e5",
+                    "secondary": "#5c5f61",
+                    "inverse-primary": "#bec6e0",
+                    "error": "#ba1a1a",
+                    "on-secondary-container": "#626567",
+                    "primary-container": "#131b2e",
+                    "on-tertiary-fixed": "#111c2d",
+                    "surface-tint": "#565e74",
+                    "surface": "#f8f9ff",
+                    "surface-container-low": "#eff4ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "24px",
+                    "sidebar-width": "280px",
+                    "xl": "64px",
+                    "lg": "40px",
+                    "sm": "12px",
+                    "base": "8px",
+                    "xs": "4px",
+                    "container-max": "1440px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "label-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9ff; color: #0b1c30; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body class="bg-surface">
+<!-- SideNavBar Shell -->
+<aside class="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-sidebar-width h-screen bg-surface border-r border-outline-variant z-50">
+<div class="p-md">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">İçerik Yönetimi</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-70">Profesyonel Ajans Paneli</p>
+</div>
+<nav class="flex-1 mt-md space-y-1">
+<!-- Kontrol Paneli (Active) -->
+<a class="flex items-center gap-sm bg-secondary-container text-on-secondary-container border-l-4 border-primary px-4 py-3 transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-body-md text-body-md">Kontrol Paneli</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">link</span>
+<span class="font-body-md text-body-md">Hesap Bağlantıları</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">photo_camera</span>
+<span class="font-body-md text-body-md">Instagram Paneli</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">share</span>
+<span class="font-body-md text-body-md">X / Twitter Paneli</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">web</span>
+<span class="font-body-md text-body-md">Web Sitesi / Blog Paneli</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">cloud</span>
+<span class="font-body-md text-body-md">Ortak İçerik Deposu</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-body-md text-body-md">Medya Kütüphanesi</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-body-md text-body-md">Yayın Logları</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Ayarlar</span>
+</a>
+</nav>
+<div class="p-md border-t border-outline-variant">
+<div class="flex items-center gap-sm">
+<img alt="Kullanıcı Profili" class="w-10 h-10 rounded-full bg-surface-container-high" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRu0M0P1Gvx3mNgtLBpNhseS-esOJsAHTtFPs0Yp6dmE6bERjfyegcN7ZXI6S3R4GBxGfUplPXzlYol3BxswQ6zrAU_HJQHtKW6HKeh6IqTgTh_OO6HReJ6C_sZxcCmDpj8PEaj7OPmXGgNr-EqZ65JI_SeNh79SDTDtzC8dxDhbCF0NZInn1lX45K_xV_gY7S5hk3-tRr3P1wJ1pbKXXhG3UDZsXmmwYwtLfhn7b_eHNsrNL2wUdngeGmPIBEcTD_XKJvxnx4rFo"/>
+<div>
+<p class="font-label-md text-label-md font-bold">Murat Demir</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Ajans Yöneticisi</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="flex justify-between items-center w-full px-lg py-md lg:pl-[300px] bg-surface border-b border-outline-variant sticky top-0 z-40">
+<div class="flex items-center gap-md">
+<div class="relative hidden md:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container rounded-full border-none focus:ring-2 focus:ring-primary w-64 font-body-sm text-body-sm" placeholder="Hızlı ara..." type="text"/>
+</div>
+<h2 class="font-headline-sm text-headline-sm font-bold text-primary lg:hidden">Dashboard</h2>
+</div>
+<div class="flex items-center gap-sm">
+<button class="hover:bg-surface-container-lowest p-2 rounded-full transition-opacity active:opacity-80 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="hover:bg-surface-container-lowest p-2 rounded-full transition-opacity active:opacity-80">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="lg:pl-[280px] p-md lg:p-lg min-h-screen">
+<div class="max-w-container-max mx-auto space-y-lg">
+<!-- Statistics Grid -->
+<section class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-md">
+<!-- Bugün Paylaşılacak -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-sm">
+<span class="material-symbols-outlined text-blue-600 bg-blue-50 p-2 rounded-lg" style="font-variation-settings: 'FILL' 1;">calendar_today</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Bugün</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant">Bugün Paylaşılacak</p>
+<h3 class="font-headline-lg text-headline-lg mt-xs">5</h3>
+</div>
+<!-- Planlanmış İçerik -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-sm">
+<span class="material-symbols-outlined text-indigo-600 bg-indigo-50 p-2 rounded-lg" style="font-variation-settings: 'FILL' 1;">schedule</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Bekleyen</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant">Planlanmış İçerik</p>
+<h3 class="font-headline-lg text-headline-lg mt-xs">12</h3>
+</div>
+<!-- Yayınlanmış İçerik -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-sm">
+<span class="material-symbols-outlined text-green-600 bg-green-50 p-2 rounded-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Toplam</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant">Yayınlanmış İçerik</p>
+<h3 class="font-headline-lg text-headline-lg mt-xs">148</h3>
+</div>
+<!-- Hata Alan İçerik -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-error border shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-sm">
+<span class="material-symbols-outlined text-error bg-error-container p-2 rounded-lg" style="font-variation-settings: 'FILL' 1;">error</span>
+<span class="font-label-sm text-label-sm text-error font-bold">Kritik</span>
+</div>
+<p class="font-label-md text-label-md text-error font-bold">Hata Alan İçerik</p>
+<h3 class="font-headline-lg text-headline-lg mt-xs text-error">2</h3>
+</div>
+<!-- Manuel Kontrol -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-sm">
+<span class="material-symbols-outlined text-amber-600 bg-amber-50 p-2 rounded-lg" style="font-variation-settings: 'FILL' 1;">pending_actions</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">İşlem</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant">Manuel Kontrol</p>
+<h3 class="font-headline-lg text-headline-lg mt-xs">1</h3>
+</div>
+</section>
+<!-- Bottom Sections Grid -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-lg">
+<!-- Left Column: Connected Accounts & Token Warnings -->
+<div class="xl:col-span-1 space-y-lg">
+<!-- Bağlı Hesaplar -->
+<section class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant">
+<div class="flex items-center justify-between mb-md">
+<h4 class="font-headline-sm text-headline-sm">Bağlı Hesaplar</h4>
+<button class="text-primary font-label-md text-label-md hover:underline">Tümünü Gör</button>
+</div>
+<div class="space-y-sm">
+<div class="flex items-center justify-between p-sm rounded-lg bg-surface">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-pink-600">photo_camera</span>
+<span class="font-body-md text-body-md">Instagram</span>
+</div>
+<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-bold">2 Aktif</span>
+</div>
+<div class="flex items-center justify-between p-sm rounded-lg bg-surface">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-blue-400">share</span>
+<span class="font-body-md text-body-md">X / Twitter</span>
+</div>
+<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-bold">1 Aktif</span>
+</div>
+<div class="flex items-center justify-between p-sm rounded-lg bg-surface">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-gray-700">web</span>
+<span class="font-body-md text-body-md">Web Sitesi</span>
+</div>
+<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-bold">1 Aktif</span>
+</div>
+</div>
+</section>
+<!-- Hesap Durumları (Warning) -->
+<section class="bg-error-container p-md rounded-xl border border-error">
+<div class="flex items-start gap-sm">
+<span class="material-symbols-outlined text-error mt-1">warning</span>
+<div>
+<h4 class="font-label-md text-label-md text-on-error-container font-bold mb-1">Hesap Durumları</h4>
+<p class="font-body-sm text-body-sm text-on-error-container">Instagram "@luxury_travel" hesabının bağlantı anahtarı (token) 2 gün içinde sona eriyor. Lütfen yenileyin.</p>
+<button class="mt-sm bg-error text-on-error px-4 py-2 rounded-lg font-label-md text-label-md">Şimdi Yenile</button>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Recent Activity & Errors -->
+<div class="xl:col-span-2 space-y-lg">
+<!-- Son Başarılı Yayınlar -->
+<section class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant">
+<div class="flex items-center justify-between mb-md">
+<h4 class="font-headline-sm text-headline-sm">Son Başarılı Yayınlar</h4>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="border-b border-outline-variant font-label-sm text-label-sm text-on-surface-variant">
+<tr>
+<th class="pb-sm px-sm">Platform</th>
+<th class="pb-sm px-sm">Hesap Adı</th>
+<th class="pb-sm px-sm">İçerik</th>
+<th class="pb-sm px-sm">Zaman</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm">
+<tr class="border-b border-surface">
+<td class="py-sm px-sm"><span class="material-symbols-outlined text-pink-600">photo_camera</span></td>
+<td class="py-sm px-sm">@moda_ajansi</td>
+<td class="py-sm px-sm">Yaz Koleksiyonu Tanıtımı</td>
+<td class="py-sm px-sm text-on-surface-variant">15 dakika önce</td>
+</tr>
+<tr class="border-b border-surface">
+<td class="py-sm px-sm"><span class="material-symbols-outlined text-blue-400">share</span></td>
+<td class="py-sm px-sm">@teknohaber</td>
+<td class="py-sm px-sm">Yeni Yapay Zeka Gelişmeleri</td>
+<td class="py-sm px-sm text-on-surface-variant">2 saat önce</td>
+</tr>
+<tr>
+<td class="py-sm px-sm"><span class="material-symbols-outlined text-gray-700">web</span></td>
+<td class="py-sm px-sm">Teknoloji Blogu</td>
+<td class="py-sm px-sm">Geleceğin Yazılım Trendleri</td>
+<td class="py-sm px-sm text-on-surface-variant">Dün, 18:30</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Son Hatalar -->
+<section class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant">
+<h4 class="font-headline-sm text-headline-sm mb-md">Son Hatalar</h4>
+<div class="space-y-sm">
+<div class="flex items-center gap-md p-sm rounded-lg bg-surface-container-low border-l-4 border-error">
+<span class="material-symbols-outlined text-error">cancel</span>
+<div class="flex-1">
+<div class="flex justify-between">
+<p class="font-label-md text-label-md font-bold">Instagram API Hatası</p>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Bugün, 09:12</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">@luxury_travel hesabına içerik gönderilirken izin hatası oluştu. (Code: 403)</p>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary">refresh</button>
+</div>
+<div class="flex items-center gap-md p-sm rounded-lg bg-surface-container-low border-l-4 border-error">
+<span class="material-symbols-outlined text-error">image_not_supported</span>
+<div class="flex-1">
+<div class="flex justify-between">
+<p class="font-label-md text-label-md font-bold">Medya Yükleme Hatası</p>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Dün, 22:45</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">"Kampanya_Final.mp4" dosyası X / Twitter boyut sınırlarını aşıyor.</p>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary">edit</button>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar Shell (Mobile) -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-2 bg-surface border-t border-outline-variant shadow-lg z-50 lg:hidden">
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl p-2 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-sm text-label-sm">Ana Sayfa</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 active:bg-surface-variant" href="#">
+<span class="material-symbols-outlined">sync</span>
+<span class="font-label-sm text-label-sm">Hesaplar</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 active:bg-surface-variant" href="#">
+<span class="material-symbols-outlined">post_add</span>
+<span class="font-label-sm text-label-sm">İçerik</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 active:bg-surface-variant" href="#">
+<span class="material-symbols-outlined">perm_media</span>
+<span class="font-label-sm text-label-sm">Medya</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 active:bg-surface-variant" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-sm text-label-sm">Ayarlar</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interactions for stat cards
+        document.querySelectorAll('.bg-surface-container-lowest').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-4px)';
+                card.style.transition = 'transform 0.2s ease-out';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+</body></html>

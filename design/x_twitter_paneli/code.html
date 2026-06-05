@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>İçerik Yönetimi - X / Twitter Paneli</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#d3e4fe",
+                    "surface-container": "#e5eeff",
+                    "outline": "#76777d",
+                    "primary-fixed-dim": "#bec6e0",
+                    "on-tertiary": "#ffffff",
+                    "tertiary": "#000000",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "background": "#f8f9ff",
+                    "on-primary-fixed": "#131b2e",
+                    "surface-container-high": "#dce9ff",
+                    "surface-dim": "#cbdbf5",
+                    "primary": "#000000",
+                    "error-container": "#ffdad6",
+                    "secondary-fixed": "#e0e3e5",
+                    "on-surface-variant": "#45464d",
+                    "on-secondary-fixed": "#191c1e",
+                    "tertiary-fixed": "#d8e3fb",
+                    "secondary-fixed-dim": "#c4c7c9",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#213145",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-tertiary-fixed-variant": "#3c475a",
+                    "on-primary-container": "#7c839b",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed-dim": "#bcc7de",
+                    "on-background": "#0b1c30",
+                    "inverse-on-surface": "#eaf1ff",
+                    "on-secondary": "#ffffff",
+                    "surface-bright": "#f8f9ff",
+                    "on-surface": "#0b1c30",
+                    "tertiary-container": "#111c2d",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-container": "#79849a",
+                    "outline-variant": "#c6c6cd",
+                    "primary-fixed": "#dae2fd",
+                    "on-secondary-fixed-variant": "#444749",
+                    "secondary-container": "#e0e3e5",
+                    "secondary": "#5c5f61",
+                    "inverse-primary": "#bec6e0",
+                    "error": "#ba1a1a",
+                    "on-secondary-container": "#626567",
+                    "primary-container": "#131b2e",
+                    "on-tertiary-fixed": "#111c2d",
+                    "surface-tint": "#565e74",
+                    "surface": "#f8f9ff",
+                    "surface-container-low": "#eff4ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "24px",
+                    "sidebar-width": "280px",
+                    "xl": "64px",
+                    "lg": "40px",
+                    "sm": "12px",
+                    "base": "8px",
+                    "xs": "4px",
+                    "container-max": "1440px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "label-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .tweet-preview-card {
+            border: 1px solid #E2E8F0;
+            transition: all 0.3s ease;
+        }
+        .tweet-preview-card:hover {
+            background-color: #F8FAFC;
+        }
+        .sidebar-active-indicator {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #000000;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-sidebar-width h-screen border-r border-outline-variant bg-surface z-50">
+<div class="px-md py-lg">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">İçerik Yönetimi</h1>
+<p class="text-on-surface-variant font-label-sm mt-xs">Profesyonel Ajans Paneli</p>
+</div>
+<nav class="flex-1 overflow-y-auto mt-sm">
+<ul class="space-y-xs">
+<li>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md">Kontrol Paneli</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="link">link</span>
+<span class="font-body-md">Hesap Bağlantıları</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="photo_camera">photo_camera</span>
+<span class="font-body-md">Instagram Paneli</span>
+</a>
+</li>
+<li class="relative">
+<a class="flex items-center gap-sm bg-secondary-container text-on-secondary-container border-l-4 border-primary px-md py-3" href="#">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+<span class="font-body-md font-semibold">X / Twitter Paneli</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="web">web</span>
+<span class="font-body-md">Web Sitesi / Blog Paneli</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="cloud">cloud</span>
+<span class="font-body-md">Ortak İçerik Deposu</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-body-md">Medya Kütüphanesi</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-body-md">Yayın Logları</span>
+</a>
+</li>
+<li class="mt-lg border-t border-outline-variant pt-md">
+<a class="flex items-center gap-sm text-on-surface-variant px-md py-3 hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md">Ayarlar</span>
+</a>
+</li>
+</ul>
+</nav>
+<div class="p-md border-t border-outline-variant">
+<div class="flex items-center gap-sm">
+<img alt="Kullanıcı Profili" class="w-10 h-10 rounded-full object-cover" data-alt="A professional corporate portrait of a young male executive in a well-lit modern office environment. He wears a crisp navy blue suit and has a confident, friendly expression. The lighting is bright and clear, emphasizing a high-end agency professional look. The background shows soft out-of-focus glass partitions and minimalist office decor in shades of white and slate grey." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-I9uCjQYqjivkvzLWj5XGWCKnBSqShaMCVz2lUpGDGey2vUcTh4HRWZQok0zmm5sYbQB_JUPsm8Mlp-7W6cQUzVHLg3OCV37KDdpzfoRHUb_fI1mU6oR3wDesZ-cNU0WSFpaZbwz32MXQm_ufeVbMZ0JL_7-FnvQ7Of5JVoh9vYKQx8fSNWLLzIQjIFwEkLKUnJ5o2BdjQxnvx0LF5Bkr3Z8UfRNjgV7F2_MRT8vAskRdlNadTnNMSwCTW0ybn_jNRsuSZdqhsfc"/>
+<div class="flex flex-col">
+<span class="font-label-md text-on-surface">Ahmet Yılmaz</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-wider">Kıdemli Editör</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="lg:ml-sidebar-width min-h-screen flex flex-col">
+<!-- TopNavBar Shell -->
+<header class="sticky top-0 z-40 bg-surface border-b border-outline-variant flex justify-between items-center w-full px-lg py-md">
+<div class="flex items-center gap-md">
+<div class="flex items-center bg-surface-container-low px-md py-xs rounded-full border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant mr-xs" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-sm w-64" placeholder="İçeriklerde ara..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<button class="hover:bg-surface-container-lowest p-2 rounded-full transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<button class="hover:bg-surface-container-lowest p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Page Header -->
+<div class="px-lg py-md bg-white">
+<div class="flex justify-between items-center">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-primary">X / Twitter Paneli</h2>
+<p class="text-on-surface-variant font-body-md">Yeni tweet oluşturun, medya ekleyin ve zamanlamanızı yönetin.</p>
+</div>
+<!-- Account Selection -->
+<div class="relative inline-block w-64">
+<label class="block text-label-sm text-on-surface-variant mb-xs">Hesap Seçimi</label>
+<select class="block w-full bg-white border border-outline-variant rounded-lg py-sm px-md text-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none">
+<option>@ajans_resmi (Ana Hesap)</option>
+<option>@ajans_destek</option>
+<option>@ajans_kampanya</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-9 pointer-events-none text-on-surface-variant" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Dashboard Content Grid -->
+<div class="flex-1 px-lg py-md grid grid-cols-12 gap-md">
+<!-- Left Column: Input & Controls (8 Cols) -->
+<div class="col-span-12 lg:col-span-8 space-y-md">
+<!-- Main Input Area -->
+<section class="bg-white rounded-xl border border-outline-variant p-md">
+<div class="flex justify-between items-center mb-sm">
+<label class="font-label-md text-on-surface-variant uppercase tracking-wider">Toplu Post Metni Girişi</label>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-sm" data-icon="info">info</span>
+<span class="text-label-sm text-on-surface-variant">Linkler otomatik kısaltılır.</span>
+</div>
+</div>
+<div class="relative">
+<textarea class="w-full p-md border border-outline-variant rounded-lg font-body-md focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all resize-none" id="tweetText" placeholder="Neler oluyor?" rows="6"></textarea>
+<!-- Real-time Validation Bar -->
+<div class="flex justify-between items-center mt-sm">
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-xs">
+<span class="font-headline-sm text-primary" id="charCountDisplay">0</span>
+<span class="text-on-surface-variant font-body-sm">/ 280</span>
+</div>
+<div class="flex items-center gap-xs text-on-surface-variant" id="linkStatus">
+<span class="material-symbols-outlined text-md" data-icon="link_off">link_off</span>
+<span class="text-label-md">Link Kontrolü: Pasif</span>
+</div>
+</div>
+<div class="flex gap-sm">
+<button class="flex items-center gap-xs text-primary font-label-md hover:bg-surface-container p-2 rounded-lg transition-colors">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+                                    AI İyileştir
+                                </button>
+<button class="flex items-center gap-xs text-primary font-label-md hover:bg-surface-container p-2 rounded-lg transition-colors">
+<span class="material-symbols-outlined" data-icon="tag">tag</span>
+                                    Hashtag Bul
+                                </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Media Upload Section -->
+<section class="bg-white rounded-xl border border-outline-variant p-md">
+<label class="block font-label-md text-on-surface-variant uppercase tracking-wider mb-md">Opsiyonel Görsel Yükleme</label>
+<div class="grid grid-cols-4 gap-md">
+<div class="col-span-1 aspect-square border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-headline-lg text-on-surface-variant" data-icon="add_a_photo">add_a_photo</span>
+<span class="text-label-sm text-on-surface-variant mt-xs">Medya Ekle</span>
+</div>
+<!-- Placeholder for uploaded image -->
+<div class="col-span-1 relative group aspect-square rounded-xl overflow-hidden border border-outline-variant">
+<img alt="Önizleme" class="w-full h-full object-cover" data-alt="A high-resolution tech-themed digital graphic featuring abstract blue lines and modern network connections. The image is clean and vibrant, reflecting a professional social media marketing aesthetic. The lighting is digital and crisp, with a subtle glow around the geometric elements. Cohesive with a modern light-mode interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDheWrUzPkXk0436Nx9cHWpdqP53SoWVXAzdY7RUs_y3dy6GwoP3rbX9PGEC_XOKWqp9ep1gFiVQv7Pq5A819dJYVLXxcC6x3P1596MFpDqVu_eXVHdPfcz868Nn3mh0LXJnC34vjSIdbxS-5DyLHw1i9uCjVUtD_YCS0yuQzylN7n7ZcvnHrdiVKqPvyV353oTsdmJz5EOy656j1m7y1jdtb9xBqNfHf1-TFha6d-sOyIfh-tmJrahNNqSJiKYcNdLzr8KR-pfPMQ"/>
+<div class="absolute inset-0 bg-primary/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<button class="bg-error text-on-error p-2 rounded-full shadow-lg">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-sm">Maksimum 4 görsel veya 1 video (15MB sınır). PNG, JPG, GIF desteklenir.</p>
+</section>
+<!-- Scheduling Section -->
+<section class="bg-white rounded-xl border border-outline-variant p-md">
+<label class="block font-label-md text-on-surface-variant uppercase tracking-wider mb-md">Planlama Ayarları</label>
+<div class="flex flex-wrap gap-md">
+<div class="flex-1 min-w-[200px]">
+<label class="block text-label-sm text-on-surface-variant mb-xs">Tarih</label>
+<div class="relative">
+<input class="w-full bg-white border border-outline-variant rounded-lg py-sm px-md text-body-md focus:ring-1 focus:ring-primary" type="date"/>
+<span class="material-symbols-outlined absolute right-3 top-2.5 pointer-events-none text-on-surface-variant" data-icon="calendar_today">calendar_today</span>
+</div>
+</div>
+<div class="flex-1 min-w-[200px]">
+<label class="block text-label-sm text-on-surface-variant mb-xs">Saat</label>
+<div class="relative">
+<input class="w-full bg-white border border-outline-variant rounded-lg py-sm px-md text-body-md focus:ring-1 focus:ring-primary" type="time"/>
+<span class="material-symbols-outlined absolute right-3 top-2.5 pointer-events-none text-on-surface-variant" data-icon="schedule">schedule</span>
+</div>
+</div>
+<div class="flex-1 min-w-[200px] flex items-end">
+<button class="w-full py-3 bg-surface-container text-on-surface font-label-md rounded-lg flex items-center justify-center gap-xs hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" data-icon="auto_schedule">auto_schedule</span>
+                                En İyi Zamanı Öner
+                            </button>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Card Preview & Actions (4 Cols) -->
+<div class="col-span-12 lg:col-span-4 space-y-md">
+<!-- Preview Section -->
+<section class="bg-white rounded-xl border border-outline-variant p-md sticky top-[100px]">
+<div class="flex justify-between items-center mb-md">
+<label class="font-label-md text-on-surface-variant uppercase tracking-wider">Kart Oluşturma Önizlemesi</label>
+<span class="bg-surface-container-highest text-on-primary-container px-2 py-1 rounded text-[10px] font-bold">LIVE</span>
+</div>
+<!-- Tweet Preview Card UI -->
+<div class="tweet-preview-card rounded-xl p-md bg-white">
+<div class="flex gap-sm">
+<img alt="Avatar" class="w-12 h-12 rounded-full border border-outline-variant" data-alt="A professional corporate portrait of a young male executive in a well-lit modern office environment. High-end agency aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7OXp0J420FR6wHAUi_sxeoMIMUCWfadaapN9uCaNYG6N4kz6JfP-XgLczu-80QhcSQXc_ldwjVttNDpBH5lVeDV_iZcgLd1rTUVnE4UtpeH8lqeNQOKWEYSFHCsY2AE87KD4a7awjrQQf1Ard218vgUVoPocdl6bXnjpYV-7scudHDUOfB8jcdONt0wf9nVLMaUypptWcBh4TWFVz2oBJura_NWE2zHaC2fF-hNy1GPdiubi8L6E_1LOIWleYUjPJgg7lae03kzE"/>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-xs">
+<span class="font-bold text-on-surface truncate">Ahmet Yılmaz</span>
+<span class="material-symbols-outlined text-primary text-[14px]" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="text-on-surface-variant text-body-sm truncate">@ajans_resmi</span>
+<span class="text-on-surface-variant text-body-sm">· 1sn</span>
+</div>
+<p class="text-on-surface text-body-md mt-xs break-words" id="previewContent">Burada tweet içeriği görünecek...</p>
+<div class="mt-md rounded-2xl overflow-hidden border border-outline-variant hidden" id="previewMedia">
+<img alt="Medya Önizleme" class="w-full h-auto" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBb4Lu3vIhnjZSatomj7FtRRcisJJwBRo5zEomLUuAnIwKn0_g4-w3i4kR4qU0RxWJAXKR4JDTQ2NavdkiK0rHHb04xB3qpyrAA8wv0A1iVxiiOH3BsvQEKt1Vew5bcZlOuMq_ADQ6YCb7f0uP70QxYTHOQeCskUwXY2FzD7qMVtfJNkTJggIrplzmswBLxIoaYVlQZhvPYJQ6sa2kHuy_2iimsOMpr1H9Gvyo8sZIeWB_-m5ewvwmnPFF_Att88RIMSY8CcCCZd5k"/>
+</div>
+<div class="flex justify-between mt-md text-on-surface-variant max-w-xs">
+<span class="material-symbols-outlined text-[18px] hover:text-primary transition-colors cursor-default" data-icon="chat_bubble">chat_bubble</span>
+<span class="material-symbols-outlined text-[18px] hover:text-green-500 transition-colors cursor-default" data-icon="repeat">repeat</span>
+<span class="material-symbols-outlined text-[18px] hover:text-red-500 transition-colors cursor-default" data-icon="favorite">favorite</span>
+<span class="material-symbols-outlined text-[18px] hover:text-primary transition-colors cursor-default" data-icon="bar_chart">bar_chart</span>
+<span class="material-symbols-outlined text-[18px] hover:text-primary transition-colors cursor-default" data-icon="share">share</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="mt-lg space-y-sm">
+<button class="w-full py-4 bg-primary text-on-primary rounded-xl font-headline-sm flex items-center justify-center gap-md hover:opacity-90 transition-opacity active:scale-[0.98]">
+<span class="material-symbols-outlined" data-icon="send">send</span>
+                            Kart Oluştur &amp; Yayınla
+                        </button>
+<div class="grid grid-cols-2 gap-sm">
+<button class="py-3 border border-outline-variant text-on-surface font-label-md rounded-xl hover:bg-surface-container-low transition-colors flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined" data-icon="schedule_send">schedule_send</span>
+                                Planla
+                            </button>
+<button class="py-3 border border-outline-variant text-on-surface font-label-md rounded-xl hover:bg-surface-container-low transition-colors flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+                                Düzenle
+                            </button>
+</div>
+</div>
+</section>
+<!-- Tips / Help Card -->
+<div class="bg-surface-container-low rounded-xl p-md border border-outline-variant">
+<div class="flex items-center gap-sm mb-xs">
+<span class="material-symbols-outlined text-primary" data-icon="lightbulb">lightbulb</span>
+<h4 class="font-label-md text-on-surface uppercase tracking-wider">Profesyonel İpucu</h4>
+</div>
+<p class="text-body-sm text-on-surface-variant">X algoritması, görselli tweetlerin etkileşim oranını %150'ye kadar artırdığını söylüyor. Görsel eklemeyi unutmayın!</p>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-2 bg-surface border-t border-outline-variant lg:hidden z-50 shadow-lg">
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-sm">Ana Sayfa</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined" data-icon="sync">sync</span>
+<span class="font-label-sm">Hesaplar</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl p-2" href="#">
+<span class="material-symbols-outlined" data-icon="post_add">post_add</span>
+<span class="font-label-sm">İçerik</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined" data-icon="perm_media">perm_media</span>
+<span class="font-label-sm">Medya</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-sm">Ayarlar</span>
+</a>
+</nav>
+<script>
+        const textarea = document.getElementById('tweetText');
+        const charCountDisplay = document.getElementById('charCountDisplay');
+        const previewContent = document.getElementById('previewContent');
+        const linkStatus = document.getElementById('linkStatus');
+        const MAX_CHARS = 280;
+
+        textarea.addEventListener('input', (e) => {
+            const length = e.target.value.length;
+            charCountDisplay.textContent = length;
+            
+            // Text sync
+            previewContent.textContent = e.target.value || "Burada tweet içeriği görünecek...";
+            
+            // Character count color logic
+            if (length > MAX_CHARS) {
+                charCountDisplay.classList.remove('text-primary');
+                charCountDisplay.classList.add('text-error');
+                textarea.classList.add('border-error', 'ring-error/20');
+            } else {
+                charCountDisplay.classList.remove('text-error');
+                charCountDisplay.classList.add('text-primary');
+                textarea.classList.remove('border-error', 'ring-error/20');
+            }
+
+            // Simple Link Detection Simulation
+            const linkPattern = /https?:\/\/[^\s]+/;
+            if (linkPattern.test(e.target.value)) {
+                linkStatus.innerHTML = '<span class="material-symbols-outlined text-md text-green-600" data-icon="link">link</span><span class="text-label-md text-green-600">Link Kontrolü: Geçerli</span>';
+            } else {
+                linkStatus.innerHTML = '<span class="material-symbols-outlined text-md" data-icon="link_off">link_off</span><span class="text-label-md">Link Kontrolü: Pasif</span>';
+            }
+        });
+
+        // Add dummy interaction for media click
+        document.querySelector('[data-icon="add_a_photo"]').parentElement.addEventListener('click', () => {
+            const previewMedia = document.getElementById('previewMedia');
+            previewMedia.classList.toggle('hidden');
+        });
+    </script>
+</body></html>

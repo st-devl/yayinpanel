@@ -1,0 +1,201 @@
+import "server-only";
+
+import { ContentStatus, PublishLogStatus } from "@prisma/client";
+import { prisma } from "@/lib/server/prisma";
+import { publishCard } from "@/lib/server/publish-runner";
+import { sendTelegramNotification } from "@/lib/server/telegram";
+
+export const MAX_RETRY_COUNT = 5;
+/** PUBLISHING durumunda bu sureden uzun kalan kartlar manuel kontrole alinir. */
+export const STUCK_PUBLISHING_MINUTES = 15;
+
+const BACKOFF_BASE_SECONDS = 60;
+const BACKOFF_MAX_SECONDS = 60 * 30;
+
+/** Exponential backoff: 60s, 120s, 240s ... maks 30dk. */
+export function computeBackoffSeconds(retryCount: number): number {
+  const seconds = BACKOFF_BASE_SECONDS * 2 ** Math.max(0, retryCount - 1);
+  return Math.min(seconds, BACKOFF_MAX_SECONDS);
+}
+
+export type SchedulerTickResult = {
+  claimed: number;
+  published: number;
+  retried: number;
+  failed: number;
+  manualCheck: number;
+  dryRun: boolean;
+};
+
+/** Yayina hazir kartlari bulur (scheduledAt<=now, nextAttemptAt<=now veya null). */
+async function findDueCards(now: Date, limit: number) {
+  return prisma.contentCard.findMany({
+    where: {
+      status: ContentStatus.SCHEDULED,
+      scheduledAt: { lte: now },
+      OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }]
+    },
+    orderBy: { scheduledAt: "asc" },
+    take: limit,
+    select: {
+      id: true,
+      platform: true,
+      accountId: true,
+      text: true,
+      mediaFileId: true,
+      platformData: true,
+      retryCount: true
+    }
+  });
+}
+
+/**
+ * Atomik claim: yalnizca status hala SCHEDULED ise PUBLISHING'e gecirir.
+ * Iki process ayni anda calissa bile yalnizca biri claim eder.
+ */
+async function claimCard(cardId: string, now: Date): Promise<boolean> {
+  const result = await prisma.contentCard.updateMany({
+    where: { id: cardId, status: ContentStatus.SCHEDULED },
+    data: { status: ContentStatus.PUBLISHING, publishingStartedAt: now }
+  });
+
+  return result.count === 1;
+}
+
+/** Uzun sure PUBLISHING kalan kartlari MANUAL_CHECK_REQUIRED yapar. */
+export async function reclaimStuckCards(now: Date): Promise<number> {
+  const threshold = new Date(now.getTime() - STUCK_PUBLISHING_MINUTES * 60_000);
+  const stuck = await prisma.contentCard.findMany({
+    where: {
+      status: ContentStatus.PUBLISHING,
+      publishingStartedAt: { lte: threshold }
+    },
+    select: { id: true, platform: true, accountId: true }
+  });
+
+  for (const card of stuck) {
+    await prisma.contentCard.update({
+      where: { id: card.id },
+      data: {
+        status: ContentStatus.MANUAL_CHECK_REQUIRED,
+        manualCheckReason:
+          "Yayin cok uzun surdu; cift gonderim riskine karsi otomatik yayinlama durduruldu."
+      }
+    });
+    await prisma.publishLog.create({
+      data: {
+        platform: card.platform,
+        accountId: card.accountId,
+        contentCardId: card.id,
+        action: "manual_check",
+        status: PublishLogStatus.WARNING,
+        errorCode: "STUCK_PUBLISHING",
+        errorMessage: "Kart uzun sure PUBLISHING durumunda kaldi"
+      }
+    });
+    await sendTelegramNotification({
+      kind: "MANUAL_CHECK",
+      detail: `Bir kart (${card.id}) uzun sure yayinda kaldi ve manuel kontrole alindi.`,
+      action: "Platformda gonderinin yayinlanip yayinlanmadigini kontrol edin."
+    });
+  }
+
+  return stuck.length;
+}
+
+/** Tek bir scheduler dongusu (dry-run destekli). */
+export async function runSchedulerTick(options?: {
+  dryRun?: boolean;
+  now?: Date;
+  limit?: number;
+}): Promise<SchedulerTickResult> {
+  const dryRun = options?.dryRun ?? false;
+  const now = options?.now ?? new Date();
+  const limit = options?.limit ?? 20;
+
+  const result: SchedulerTickResult = {
+    claimed: 0,
+    published: 0,
+    retried: 0,
+    failed: 0,
+    manualCheck: 0,
+    dryRun
+  };
+
+  result.manualCheck = dryRun ? 0 : await reclaimStuckCards(now);
+
+  const dueCards = await findDueCards(now, limit);
+
+  if (dryRun) {
+    result.claimed = dueCards.length;
+    return result;
+  }
+
+  for (const card of dueCards) {
+    const claimed = await claimCard(card.id, now);
+
+    if (!claimed) {
+      continue;
+    }
+
+    result.claimed += 1;
+    const outcome = await publishCard(card);
+
+    if (outcome.ok) {
+      await prisma.contentCard.update({
+        where: { id: card.id },
+        data: {
+          status: ContentStatus.PUBLISHED,
+          publishedAt: new Date(),
+          externalPostId: outcome.result.externalPostId,
+          externalPostUrl: outcome.result.externalPostUrl,
+          errorCode: null,
+          errorMessage: null,
+          manualCheckReason: null
+        }
+      });
+      result.published += 1;
+      continue;
+    }
+
+    const error = outcome.error;
+
+    if (error.isTransient && card.retryCount + 1 < MAX_RETRY_COUNT) {
+      const nextRetry = card.retryCount + 1;
+      const backoff = computeBackoffSeconds(nextRetry);
+      await prisma.contentCard.update({
+        where: { id: card.id },
+        data: {
+          status: ContentStatus.SCHEDULED,
+          retryCount: nextRetry,
+          nextAttemptAt: new Date(now.getTime() + backoff * 1000),
+          errorCode: error.code,
+          errorMessage: error.message
+        }
+      });
+      result.retried += 1;
+      continue;
+    }
+
+    // Kalici hata veya retry tukendi -> FAILED + Telegram.
+    await prisma.contentCard.update({
+      where: { id: card.id },
+      data: {
+        status: ContentStatus.FAILED,
+        errorCode: error.code,
+        errorMessage: error.message
+      }
+    });
+    result.failed += 1;
+
+    await sendTelegramNotification({
+      kind: error.isTransient ? "RETRY_EXHAUSTED" : "PUBLISH_FAILED",
+      detail: `Kart ${card.id} yayinlanamadi: ${error.message}`,
+      action: error.isAuth
+        ? "Ilgili hesabin tokenini yenileyin."
+        : "Icerigi kontrol edip tekrar planlayin."
+    });
+  }
+
+  return result;
+}

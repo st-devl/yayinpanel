@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+
+<html lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Blog Yönetim Paneli</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#d3e4fe",
+                        "surface-container": "#e5eeff",
+                        "outline": "#76777d",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#000000",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "background": "#f8f9ff",
+                        "on-primary-fixed": "#131b2e",
+                        "surface-container-high": "#dce9ff",
+                        "surface-dim": "#cbdbf5",
+                        "primary": "#000000",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#e0e3e5",
+                        "on-surface-variant": "#45464d",
+                        "on-secondary-fixed": "#191c1e",
+                        "tertiary-fixed": "#d8e3fb",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#213145",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-tertiary-fixed-variant": "#3c475a",
+                        "on-primary-container": "#7c839b",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#bcc7de",
+                        "on-background": "#0b1c30",
+                        "inverse-on-surface": "#eaf1ff",
+                        "on-secondary": "#ffffff",
+                        "surface-bright": "#f8f9ff",
+                        "on-surface": "#0b1c30",
+                        "tertiary-container": "#111c2d",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-container": "#79849a",
+                        "outline-variant": "#c6c6cd",
+                        "primary-fixed": "#dae2fd",
+                        "on-secondary-fixed-variant": "#444749",
+                        "secondary-container": "#e0e3e5",
+                        "secondary": "#5c5f61",
+                        "inverse-primary": "#bec6e0",
+                        "error": "#ba1a1a",
+                        "on-secondary-container": "#626567",
+                        "primary-container": "#131b2e",
+                        "on-tertiary-fixed": "#111c2d",
+                        "surface-tint": "#565e74",
+                        "surface": "#f8f9ff",
+                        "surface-container-low": "#eff4ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "24px",
+                        "sidebar-width": "280px",
+                        "xl": "64px",
+                        "lg": "40px",
+                        "sm": "12px",
+                        "base": "8px",
+                        "xs": "4px",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9ff; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .rich-editor:focus-within { outline: 2px solid #000000; outline-offset: 2px; }
+    </style>
+</head>
+<body class="text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-sidebar-width h-screen bg-surface border-r border-outline-variant z-50">
+<div class="px-md py-lg">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">İçerik Yönetimi</h1>
+<p class="font-body-md text-body-md text-on-primary-container">Profesyonel Ajans Paneli</p>
+</div>
+<nav class="flex-1 px-base space-y-xs overflow-y-auto custom-scrollbar">
+<!-- Navigation Items from JSON -->
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">Kontrol Paneli</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="link">link</span>
+<span class="font-body-md text-body-md">Hesap Bağlantıları</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="photo_camera">photo_camera</span>
+<span class="font-body-md text-body-md">Instagram Paneli</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+<span class="font-body-md text-body-md">X / Twitter Paneli</span>
+</a>
+<!-- Active Tab: Web Sitesi / Blog Paneli -->
+<a class="flex items-center gap-sm bg-secondary-container text-on-secondary-container border-l-4 border-primary px-4 py-3 rounded-r-lg" href="#">
+<span class="material-symbols-outlined" data-icon="web">web</span>
+<span class="font-body-md text-body-md font-semibold">Web Sitesi / Blog Paneli</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="cloud">cloud</span>
+<span class="font-body-md text-body-md">Ortak İçerik Deposu</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-body-md text-body-md">Medya Kütüphanesi</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-body-md text-body-md">Yayın Logları</span>
+</a>
+<a class="flex items-center gap-sm text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-colors rounded-lg mt-xl" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Ayarlar</span>
+</a>
+</nav>
+<div class="p-md border-t border-outline-variant flex items-center gap-sm">
+<img alt="Kullanıcı Profili" class="w-10 h-10 rounded-full object-cover border border-outline-variant" data-alt="A professional headshot of a creative agency executive with a confident expression, wearing a minimalist black turtleneck. The studio lighting is soft and directional, casting subtle shadows that emphasize depth. The background is a clean, neutral gray, fitting a modern corporate and high-end aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXNQoN-FLPjXIvf6Da_IBs_ko11IBsS5s7M8TMMoUOREDHYUK-wvepbD2oxPU7_iEvbysKcayluDs2bejqoBdpm-yjVgqA93NB-QZxXQOMW1gAnPnulvn2MLAbaPYPyuhTjI5JN0C6oYEbyXHu1NeXQdk87fl1tMidkJoHz92e_1V0qhXb8Q_VxTaiLagp6xFQzb_8p83dtuOZr3SYt7SGt8MsQAHmRy4XhhJWxT8Vgy8AMJg_VgI-BlrBBF1M_VRgqwIWL35GnHk"/>
+<div>
+<p class="font-label-md text-label-md font-bold text-on-surface">Caner Akın</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Kıdemli Editör</p>
+</div>
+</div>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="flex justify-between items-center w-full px-lg py-md lg:pl-[300px] bg-surface border-b border-outline-variant sticky top-0 z-40">
+<div class="flex items-center gap-md">
+<h2 class="font-headline-sm text-headline-sm font-bold text-primary">Blog Paneli</h2>
+<div class="relative hidden sm:block">
+<select class="bg-surface-container border border-outline-variant rounded-lg px-4 py-2 text-body-md focus:ring-2 focus:ring-primary outline-none appearance-none pr-10 cursor-pointer">
+<option>www.ajans-portal.com</option>
+<option>blog.tasarim-dunyam.io</option>
+<option>kurumsal-haber.net</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="hover:bg-surface-container-lowest p-2 rounded-full transition-opacity active:opacity-80">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:bg-surface-container-lowest p-2 rounded-full transition-opacity active:opacity-80">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="lg:pl-[280px] min-h-screen pb-xl">
+<div class="max-w-[1200px] mx-auto px-md lg:px-lg py-lg">
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-lg items-start">
+<!-- Editor Column -->
+<div class="xl:col-span-8 space-y-md">
+<!-- Title & Slug Section -->
+<div class="bg-surface border border-outline-variant rounded-xl p-md shadow-sm">
+<div class="space-y-sm">
+<label class="font-label-md text-label-md text-on-surface-variant block">Blog Başlığı</label>
+<input class="w-full text-headline-md font-headline-md bg-transparent border-none focus:ring-0 placeholder:text-outline-variant p-0" id="blog-title" placeholder="Göz Alıcı Bir Başlık Girin..." type="text"/>
+<div class="flex items-center gap-xs pt-base">
+<span class="material-symbols-outlined text-sm text-outline" data-icon="link">link</span>
+<span class="text-body-sm text-on-surface-variant">Slug:</span>
+<span class="text-body-sm text-primary font-medium" id="slug-preview">yeni-icerik-basligi</span>
+<button class="text-primary hover:underline text-body-sm ml-xs">Düzenle</button>
+</div>
+</div>
+</div>
+<!-- Rich Text Editor Mockup -->
+<div class="bg-surface border border-outline-variant rounded-xl shadow-sm overflow-hidden flex flex-col min-h-[600px]">
+<!-- Editor Toolbar -->
+<div class="bg-surface-container-low border-b border-outline-variant p-2 flex flex-wrap gap-1">
+<button class="p-2 hover:bg-surface-container-high rounded transition-colors"><span class="material-symbols-outlined">format_bold</span></button>
+<button class="p-2 hover:bg-surface-container-high rounded transition-colors"><span class="material-symbols-outlined">format_italic</span></button>
+<button class="p-2 hover:bg-surface-container-high rounded transition-colors"><span class="material-symbols-outlined">format_underlined</span></button>
+<div class="w-[1px] h-6 bg-outline-variant mx-1 self-center"></div>
+<button class="p-2 hover:bg-surface-container-high rounded transition-colors"><span class="material-symbols-outlined">format_list_bulleted</span></button>
+<button class="p-2 hover:bg-surface-container-high rounded transition-colors"><span class="material-symbols-outlined">format_list_numbered</span></button>
+<div class="w-[1px] h-6 bg-outline-variant mx-1 self-center"></div>
+<button class="p-2 hover:bg-surface-container-high rounded transition-colors"><span class="material-symbols-outlined">format_quote</span></button>
+<button class="p-2 hover:bg-surface-container-high rounded transition-colors"><span class="material-symbols-outlined">link</span></button>
+<button class="p-2 hover:bg-surface-container-high rounded transition-colors"><span class="material-symbols-outlined">image</span></button>
+<button class="p-2 hover:bg-surface-container-high rounded transition-colors"><span class="material-symbols-outlined">code</span></button>
+</div>
+<!-- Editable Area -->
+<div class="flex-1 p-md font-body-lg text-body-lg outline-none focus:bg-white transition-colors" contenteditable="true" placeholder="Hikayenizi anlatmaya başlayın...">
+<p class="text-outline-variant italic">İçeriğinizi buraya yazmaya başlayın...</p>
+</div>
+</div>
+</div>
+<!-- Sidebar Settings Column -->
+<div class="xl:col-span-4 space-y-md">
+<!-- Save & Publish Card -->
+<div class="bg-surface border border-outline-variant rounded-xl p-md shadow-sm space-y-md">
+<h3 class="font-headline-sm text-headline-sm">Yayınlama Ayarları</h3>
+<div class="space-y-sm">
+<label class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span> Yayınlanma Zamanı
+                            </label>
+<input class="w-full bg-surface-container border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:ring-1 focus:ring-primary outline-none" type="datetime-local"/>
+</div>
+<div class="flex flex-col gap-sm pt-base">
+<button class="w-full py-3 bg-primary text-on-primary rounded-lg font-label-md hover:opacity-90 transition-opacity flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">rocket_launch</span> Hemen Yayınla
+                            </button>
+<div class="grid grid-cols-2 gap-sm">
+<button class="py-2 border border-outline-variant text-on-surface rounded-lg font-label-sm hover:bg-surface-container transition-colors">Taslak Kaydet</button>
+<button class="py-2 border border-outline-variant text-on-surface rounded-lg font-label-sm hover:bg-surface-container transition-colors">Planla</button>
+</div>
+</div>
+</div>
+<!-- Category & Tags -->
+<div class="bg-surface border border-outline-variant rounded-xl p-md shadow-sm space-y-md">
+<div class="space-y-sm">
+<label class="font-label-md text-label-md">Kategori</label>
+<select class="w-full bg-surface-container border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-1 focus:ring-primary outline-none">
+<option>Dijital Pazarlama</option>
+<option>Teknoloji</option>
+<option>İş Dünyası</option>
+<option>Yaşam Tarzı</option>
+</select>
+</div>
+<div class="space-y-sm">
+<label class="font-label-md text-label-md">Etiketler</label>
+<input class="w-full bg-surface-container border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:ring-1 focus:ring-primary outline-none" placeholder="Virgül ile ayırın..." type="text"/>
+<div class="flex flex-wrap gap-xs mt-2">
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded text-xs font-medium flex items-center gap-1">SEO <button class="material-symbols-outlined text-[12px]">close</button></span>
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded text-xs font-medium flex items-center gap-1">Pazarlama <button class="material-symbols-outlined text-[12px]">close</button></span>
+</div>
+</div>
+</div>
+<!-- Featured Image -->
+<div class="bg-surface border border-outline-variant rounded-xl p-md shadow-sm space-y-md">
+<label class="font-label-md text-label-md block">Öne Çıkan Görsel</label>
+<div class="relative group cursor-pointer border-2 border-dashed border-outline-variant rounded-xl h-48 flex flex-col items-center justify-center bg-surface-container-low hover:bg-surface-container-high transition-colors overflow-hidden">
+<span class="material-symbols-outlined text-4xl text-outline mb-2" data-icon="add_photo_alternate">add_photo_alternate</span>
+<p class="text-body-sm text-on-surface-variant">Görsel yükle veya sürükle</p>
+<!-- Image Background Mockup (hidden by default, shown for visual context in generated UI) -->
+<img class="absolute inset-0 w-full h-full object-cover opacity-10" data-alt="A moody and high-contrast creative workspace featuring a modern laptop, a steaming cup of coffee, and a minimalist notebook on a dark wooden desk. The lighting is low-key, with a single warm spotlight from the side, creating long shadows and a focused, intellectual atmosphere. The overall style is professional, sophisticated, and geared towards high-end content creation." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFy3OdkbiJhshTydcLcPRecD7zoDhIR7hQSJCyKhU52JN9IhAi-A3CitdHCLNkGtMHek1YvnRVrGMkhDjqyKRqvISdNvgLKTCzySvtLGGrHjeWPd0Fv0XtJvxiOOSHPq-2WverPSQ-VgMrWycko1B1KN_J-nBUVk57w5VUCmPEl--T2FRgFExru9-E8TDyC3eV6KWnYWcD8NR0YOzz11v9uUWqQG2pc--3IoI97gwTNTVHfwRUNgCa0ar9vCcISqSzw6MA5rr6xrk"/>
+</div>
+</div>
+<!-- SEO Card -->
+<div class="bg-surface border border-outline-variant rounded-xl p-md shadow-sm space-y-md">
+<h3 class="font-headline-sm text-headline-sm">SEO Ayarları</h3>
+<div class="space-y-sm">
+<div class="flex justify-between items-center">
+<label class="font-label-sm text-label-sm text-on-surface-variant">SEO Başlığı</label>
+<span class="text-[10px] text-outline">0 / 60</span>
+</div>
+<input class="w-full bg-surface-container border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:ring-1 focus:ring-primary outline-none" placeholder="Arama motoru başlığı..." type="text"/>
+</div>
+<div class="space-y-sm">
+<div class="flex justify-between items-center">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Meta Açıklama</label>
+<span class="text-[10px] text-error">0 / 160</span>
+</div>
+<textarea class="w-full bg-surface-container border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:ring-1 focus:ring-primary outline-none resize-none" placeholder="İçerik özeti girin..." rows="3"></textarea>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar Shell (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-2 bg-surface border-t border-outline-variant shadow-lg lg:hidden z-50">
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm">Ana Sayfa</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined" data-icon="sync">sync</span>
+<span class="font-label-sm text-label-sm">Hesaplar</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl p-2" href="#">
+<span class="material-symbols-outlined" data-icon="post_add">post_add</span>
+<span class="font-label-sm text-label-sm">İçerik</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined" data-icon="perm_media">perm_media</span>
+<span class="font-label-sm text-label-sm">Medya</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-sm text-label-sm">Ayarlar</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for Slug generation
+        const titleInput = document.getElementById('blog-title');
+        const slugPreview = document.getElementById('slug-preview');
+
+        titleInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (val.trim() === '') {
+                slugPreview.textContent = 'yeni-icerik-basligi';
+                return;
+            }
+            const slug = val.toLowerCase()
+                .replace(/[^a-z0-9ğüşıöç ]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/[ğ]/g, 'g')
+                .replace(/[ü]/g, 'u')
+                .replace(/[ş]/g, 's')
+                .replace(/[ı]/g, 'i')
+                .replace(/[ö]/g, 'o')
+                .replace(/[ç]/g, 'c');
+            slugPreview.textContent = slug;
+        });
+
+        // Hover scale interaction logic as defined in JSON style_interactions
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(btn => {
+            btn.addEventListener('mousedown', () => btn.classList.add('scale-95'));
+            btn.addEventListener('mouseup', () => btn.classList.remove('scale-95'));
+            btn.addEventListener('mouseleave', () => btn.classList.remove('scale-95'));
+        });
+    </script>
+</body></html>

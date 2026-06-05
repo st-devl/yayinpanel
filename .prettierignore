@@ -1,0 +1,6 @@
+node_modules
+.next
+package-lock.json
+prisma/dev.db
+design
+proje.md

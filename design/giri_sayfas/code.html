@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>İçerik Planlayıcı - Giriş</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#d3e4fe",
+                        "surface-container": "#e5eeff",
+                        "outline": "#76777d",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#000000",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "background": "#f8f9ff",
+                        "on-primary-fixed": "#131b2e",
+                        "surface-container-high": "#dce9ff",
+                        "surface-dim": "#cbdbf5",
+                        "primary": "#000000",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#e0e3e5",
+                        "on-surface-variant": "#45464d",
+                        "on-secondary-fixed": "#191c1e",
+                        "tertiary-fixed": "#d8e3fb",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#213145",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-tertiary-fixed-variant": "#3c475a",
+                        "on-primary-container": "#7c839b",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#bcc7de",
+                        "on-background": "#0b1c30",
+                        "inverse-on-surface": "#eaf1ff",
+                        "on-secondary": "#ffffff",
+                        "surface-bright": "#f8f9ff",
+                        "on-surface": "#0b1c30",
+                        "tertiary-container": "#111c2d",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-container": "#79849a",
+                        "outline-variant": "#c6c6cd",
+                        "primary-fixed": "#dae2fd",
+                        "on-secondary-fixed-variant": "#444749",
+                        "secondary-container": "#e0e3e5",
+                        "secondary": "#5c5f61",
+                        "inverse-primary": "#bec6e0",
+                        "error": "#ba1a1a",
+                        "on-secondary-container": "#626567",
+                        "primary-container": "#131b2e",
+                        "on-tertiary-fixed": "#111c2d",
+                        "surface-tint": "#565e74",
+                        "surface": "#f8f9ff",
+                        "surface-container-low": "#eff4ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "24px",
+                        "sidebar-width": "280px",
+                        "xl": "64px",
+                        "lg": "40px",
+                        "sm": "12px",
+                        "base": "8px",
+                        "xs": "4px",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9ff;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 1);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex items-center justify-center p-md">
+<!-- Background Decorative Elements -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none">
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-surface-container rounded-full blur-[120px] opacity-50"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-surface-variant rounded-full blur-[100px] opacity-40"></div>
+</div>
+<!-- Main Content Container -->
+<main class="relative z-10 w-full max-w-[480px]">
+<div class="flex flex-col gap-lg">
+<!-- Logo Section -->
+<div class="flex flex-col items-center gap-sm animate-fade-in">
+<div class="w-16 h-16 bg-primary rounded-xl flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-on-primary text-[32px]" data-icon="calendar_month">calendar_month</span>
+</div>
+<div class="text-center">
+<h1 class="font-headline-md text-headline-md text-primary tracking-tight">İçerik Planlayıcı</h1>
+</div>
+</div>
+<!-- Login Card -->
+<section class="bg-surface-container-lowest rounded-xl p-lg shadow-xl border border-outline-variant transition-all duration-300 hover:shadow-2xl">
+<div class="flex flex-col gap-md">
+<!-- Card Header -->
+<div class="flex flex-col gap-xs text-center">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Kişisel İçerik Planlama Paneli</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Instagram, X ve web sitesi içeriklerinizi tek panelden planlayın.</p>
+</div>
+<!-- Error Message (Hidden by default) -->
+<div class="hidden flex items-center gap-sm bg-error-container text-on-error-container p-sm rounded-lg border border-error/20" id="error-alert">
+<span class="material-symbols-outlined text-[20px]" data-icon="error">error</span>
+<p class="font-label-md text-label-md">E-posta veya şifre hatalı.</p>
+</div>
+<!-- Login Form -->
+<form class="flex flex-col gap-md" id="login-form">
+<!-- Email Field -->
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface-variant ml-1" for="email">E-posta</label>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors" data-icon="mail">mail</span>
+<input class="w-full pl-11 pr-4 py-3 bg-surface border border-outline-variant rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-outline" id="email" name="email" placeholder="E-posta adresiniz" required="" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between items-center px-1">
+<label class="font-label-md text-label-md text-on-surface-variant" for="password">Şifre</label>
+<a class="font-label-sm text-label-sm text-primary hover:underline" href="#">Şifremi Unuttum</a>
+</div>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors" data-icon="lock">lock</span>
+<input class="w-full pl-11 pr-12 py-3 bg-surface border border-outline-variant rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-outline" id="password" name="password" placeholder="Şifreniz" required="" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface-variant transition-colors" onclick="togglePassword()" type="button">
+<span class="material-symbols-outlined" data-icon="visibility" id="password-toggle-icon">visibility</span>
+</button>
+</div>
+</div>
+<!-- Submit Button -->
+<button class="w-full mt-2 py-4 bg-primary text-on-primary font-label-md text-label-md rounded-lg shadow-md hover:bg-primary/90 active:scale-[0.98] transition-all flex items-center justify-center gap-sm group" type="submit">
+<span>Giriş Yap</span>
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</form>
+<!-- Divider -->
+<div class="flex items-center gap-md my-base">
+<div class="h-[1px] flex-1 bg-outline-variant"></div>
+<span class="font-label-sm text-label-sm text-outline">veya</span>
+<div class="h-[1px] flex-1 bg-outline-variant"></div>
+</div>
+<!-- Social Login (Visual Placeholder for high-end UI) -->
+<div class="grid grid-cols-2 gap-sm">
+<button class="flex items-center justify-center gap-sm p-sm border border-outline-variant rounded-lg hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined" data-icon="alternate_email">alternate_email</span>
+<span class="font-label-sm text-label-sm">Google</span>
+</button>
+<button class="flex items-center justify-center gap-sm p-sm border border-outline-variant rounded-lg hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="font-label-sm text-label-sm">Apple</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Footer Links -->
+<footer class="text-center">
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                    Hesabınız yok mu? <a class="text-primary font-semibold hover:underline" href="#">Kaydolun</a>
+</p>
+</footer>
+</div>
+</main>
+<!-- UI Interactions Script -->
+<script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('password-toggle-icon');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.textContent = 'visibility_off';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.textContent = 'visibility';
+            }
+        }
+
+        // Simulating error for demonstration
+        const loginForm = document.getElementById('login-form');
+        const errorAlert = document.getElementById('error-alert');
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            // In a real app, this would be an async check
+            errorAlert.classList.remove('hidden');
+            
+            // Trigger a shake animation on the card
+            const card = document.querySelector('section');
+            card.classList.add('animate-shake');
+            setTimeout(() => card.classList.remove('animate-shake'), 500);
+        });
+    </script>
+<!-- Custom Micro-Animations -->
+<style>
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+    </style>
+</body></html>
