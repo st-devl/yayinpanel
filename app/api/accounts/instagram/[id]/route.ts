@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { Platform } from "@prisma/client";
 import { requireApiUser } from "@/lib/server/api-auth";
 import { updateInstagramAccessToken } from "@/lib/server/account-credentials";
+import {
+  accountDeletionBlockedMessage,
+  getAccountDeletionBlocker
+} from "@/lib/server/account-deletion-guard";
 import { prisma } from "@/lib/server/prisma";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -49,6 +54,14 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
 
   if (!account) {
     return NextResponse.json({ error: "Hesap bulunamadi" }, { status: 404 });
+  }
+
+  const blocker = await getAccountDeletionBlocker(Platform.INSTAGRAM, id);
+  if (blocker) {
+    return NextResponse.json(
+      { error: accountDeletionBlockedMessage(blocker), blocker },
+      { status: 409 }
+    );
   }
 
   await prisma.instagramAccount.delete({ where: { id } });

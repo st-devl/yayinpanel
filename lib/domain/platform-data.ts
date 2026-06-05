@@ -11,7 +11,7 @@ export const xPlatformDataSchema = z.object({
   platform: z.literal("X").optional(),
   linkUrl: z.string().url().optional().or(z.literal("")),
   hasMedia: z.boolean().default(false),
-  isThread: z.literal(false).default(false)
+  isThread: z.boolean().default(false)
 });
 
 export const wordpressPlatformDataSchema = z.object({
@@ -51,7 +51,9 @@ export const platformDataByPlatform = {
 export type InstagramPlatformData = z.infer<typeof instagramPlatformDataSchema>;
 export type XPlatformData = z.infer<typeof xPlatformDataSchema>;
 export type WordPressPlatformData = z.infer<typeof wordpressPlatformDataSchema>;
-export type CustomSitePlatformData = z.infer<typeof customSitePlatformDataSchema>;
+export type CustomSitePlatformData = z.infer<
+  typeof customSitePlatformDataSchema
+>;
 export type PlatformData =
   | InstagramPlatformData
   | XPlatformData

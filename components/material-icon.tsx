@@ -114,6 +114,7 @@ const iconMap: Record<string, LucideIcon> = {
   check_circle: CheckCircle,
   chevron_left: ChevronLeft,
   chevron_right: ChevronRight,
+  close: CircleX,
   cloud: Cloud,
   cloud_off: CloudOff,
   cloud_upload: CloudUpload,

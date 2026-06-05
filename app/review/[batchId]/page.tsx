@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { MaterialIcon } from "@/components/material-icon";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { BulkActionBar } from "@/components/ai/bulk-action-bar";
 import { ReviewCard, type ReviewItemData } from "@/components/ai/review-card";
 
@@ -26,6 +25,14 @@ type EditModalState = {
   data: Record<string, unknown>;
   scheduledAt: string;
 } | null;
+
+type EditField = {
+  key: string;
+  label: string;
+  type: "text" | "textarea" | "tags" | "lines" | "checkbox";
+  help?: string;
+  rows?: number;
+};
 
 export default function ReviewPage() {
   const { batchId } = useParams<{ batchId: string }>();
@@ -50,7 +57,10 @@ export default function ReviewPage() {
 
     try {
       const res = await fetch(`/api/batches/${batchId}`);
-      const payload = (await res.json()) as { data?: BatchDetail; error?: string };
+      const payload = (await res.json()) as {
+        data?: BatchDetail;
+        error?: string;
+      };
 
       if (!res.ok || !payload.data) {
         throw new Error(payload.error ?? "Batch yüklenemedi.");
@@ -93,14 +103,11 @@ export default function ReviewPage() {
     setBusy(true);
 
     try {
-      const res = await fetch(
-        `/api/batches/${batchId}/items/${itemId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "approve" })
-        }
-      );
+      const res = await fetch(`/api/batches/${batchId}/items/${itemId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve" })
+      });
 
       if (!res.ok) {
         const p = (await res.json()) as { error?: string };
@@ -174,23 +181,28 @@ export default function ReviewPage() {
     setBusy(true);
 
     try {
-      await fetch(
-        `/api/batches/${batchId}/items/${editModal.item.id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "edit",
-            proposedPlatformData: editModal.data,
-            scheduledAt: editModal.scheduledAt || null
-          })
-        }
-      );
+      await fetch(`/api/batches/${batchId}/items/${editModal.item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "edit",
+          proposedPlatformData: editModal.data,
+          scheduledAt: editModal.scheduledAt
+            ? new Date(editModal.scheduledAt).toISOString()
+            : null
+        })
+      });
       setEditModal(null);
       await loadBatch();
     } finally {
       setBusy(false);
     }
+  }
+
+  function updateEditField(key: string, value: unknown) {
+    setEditModal((prev) =>
+      prev ? { ...prev, data: { ...prev.data, [key]: value } } : null
+    );
   }
 
   if (loading) {
@@ -279,7 +291,8 @@ export default function ReviewPage() {
                     onChange={(e) => setStartDateInput(e.target.value)}
                   />
                   <span className="font-body-sm text-body-sm text-amber-700">
-                    Başlangıç tarihi seçin (tarih belirsiz içerikler için uygulanır)
+                    Başlangıç tarihi seçin (tarih belirsiz içerikler için
+                    uygulanır)
                   </span>
                 </div>
               </div>
@@ -311,7 +324,9 @@ export default function ReviewPage() {
         {batch.items.length === 0 ? (
           <div className="panel-card flex min-h-[300px] flex-col items-center justify-center gap-sm p-xl text-center">
             <MaterialIcon name="inbox" className="text-outline" size={44} />
-            <p className="font-headline-sm text-headline-sm">İçerik bulunamadı</p>
+            <p className="font-headline-sm text-headline-sm">
+              İçerik bulunamadı
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-md md:grid-cols-2 xl:grid-cols-3">
@@ -324,10 +339,13 @@ export default function ReviewPage() {
                 onApprove={approveItem}
                 onReject={rejectItem}
                 onEdit={(i) => {
-                  const data = JSON.parse(i.proposedPlatformData) as Record<
-                    string,
-                    unknown
-                  >;
+                  const data = normalizeEditableData(
+                    i,
+                    JSON.parse(i.proposedPlatformData) as Record<
+                      string,
+                      unknown
+                    >
+                  );
                   setEditModal({
                     item: i,
                     data,
@@ -345,7 +363,11 @@ export default function ReviewPage() {
         {/* Tümü tamamlandıysa */}
         {pendingItems.length === 0 && batch.items.length > 0 && (
           <div className="panel-card flex flex-col items-center gap-md p-xl text-center">
-            <MaterialIcon name="check_circle" className="text-success" size={48} />
+            <MaterialIcon
+              name="check_circle"
+              className="text-success"
+              size={48}
+            />
             <div>
               <p className="font-headline-sm text-headline-sm">
                 Tüm içerikler işlendi
@@ -368,7 +390,7 @@ export default function ReviewPage() {
       {/* Düzenleme modalı */}
       {editModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-md">
-          <section className="panel-card w-full max-w-2xl space-y-md overflow-y-auto p-md shadow-panel max-h-[90vh]">
+          <section className="panel-card max-h-[90vh] w-full max-w-2xl space-y-md overflow-y-auto p-md shadow-panel">
             <div className="flex items-center justify-between gap-md">
               <h2 className="font-headline-sm text-headline-sm">
                 İçeriği Düzenle
@@ -383,46 +405,104 @@ export default function ReviewPage() {
             </div>
 
             <div className="space-y-sm">
-              {Object.entries(editModal.data).map(([key, value]) => (
-                <label key={key} className="block space-y-xs">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">
-                    {key}
-                  </span>
-                  {typeof value === "string" && value.length > 100 ? (
-                    <textarea
-                      className="input-surface w-full resize-y rounded-lg px-3 py-2 font-body-sm text-body-sm"
-                      rows={4}
-                      value={value}
-                      onChange={(e) =>
-                        setEditModal((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                data: { ...prev.data, [key]: e.target.value }
-                              }
-                            : null
-                        )
-                      }
-                    />
-                  ) : (
-                    <input
-                      type="text"
-                      className="input-surface w-full rounded-lg px-3 py-2 font-body-sm text-body-sm"
-                      value={typeof value === "string" ? value : JSON.stringify(value)}
-                      onChange={(e) =>
-                        setEditModal((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                data: { ...prev.data, [key]: e.target.value }
-                              }
-                            : null
-                        )
-                      }
-                    />
-                  )}
-                </label>
-              ))}
+              {editableFieldsForItem(editModal.item, editModal.data).map(
+                (field) => {
+                  const value = editModal.data[field.key];
+
+                  return (
+                    <label key={field.key} className="block space-y-xs">
+                      <span className="font-label-sm text-label-sm text-on-surface-variant">
+                        {field.label}
+                      </span>
+                      {field.help ? (
+                        <span className="block font-body-sm text-body-sm text-outline">
+                          {field.help}
+                        </span>
+                      ) : null}
+                      {field.type === "textarea" ? (
+                        <textarea
+                          className="input-surface w-full resize-y rounded-lg px-3 py-2 font-body-sm text-body-sm"
+                          rows={field.rows ?? 4}
+                          value={stringValue(value)}
+                          onChange={(e) =>
+                            updateEditField(field.key, e.target.value)
+                          }
+                        />
+                      ) : field.type === "lines" ? (
+                        <textarea
+                          className="input-surface w-full resize-y rounded-lg px-3 py-2 font-body-sm text-body-sm"
+                          rows={field.rows ?? 4}
+                          value={arrayValue(value).join("\n")}
+                          onChange={(e) =>
+                            updateEditField(
+                              field.key,
+                              e.target.value
+                                .split("\n")
+                                .map((line) => line.trim())
+                                .filter(Boolean)
+                            )
+                          }
+                        />
+                      ) : field.type === "tags" ? (
+                        <input
+                          type="text"
+                          className="input-surface w-full rounded-lg px-3 py-2 font-body-sm text-body-sm"
+                          value={arrayValue(value).join(", ")}
+                          onChange={(e) =>
+                            updateEditField(
+                              field.key,
+                              e.target.value
+                                .split(",")
+                                .map((part) => part.trim())
+                                .filter(Boolean)
+                            )
+                          }
+                        />
+                      ) : field.type === "checkbox" ? (
+                        <input
+                          type="checkbox"
+                          className="h-5 w-5"
+                          checked={Boolean(value)}
+                          onChange={(e) =>
+                            updateEditField(field.key, e.target.checked)
+                          }
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          className="input-surface w-full rounded-lg px-3 py-2 font-body-sm text-body-sm"
+                          value={stringValue(value)}
+                          onChange={(e) =>
+                            updateEditField(field.key, e.target.value)
+                          }
+                        />
+                      )}
+                    </label>
+                  );
+                }
+              )}
+
+              {uneditableTechnicalFields(editModal.data).length > 0 ? (
+                <details className="rounded-lg border border-outline-variant p-sm">
+                  <summary className="cursor-pointer font-label-sm text-label-sm text-on-surface-variant">
+                    Teknik alanlar
+                  </summary>
+                  <div className="mt-sm grid grid-cols-1 gap-sm md:grid-cols-2">
+                    {uneditableTechnicalFields(editModal.data).map(
+                      ([key, value]) => (
+                        <div key={key}>
+                          <p className="font-label-sm text-label-sm text-outline">
+                            {technicalFieldLabel(key)}
+                          </p>
+                          <p className="break-words font-body-sm text-body-sm">
+                            {formatTechnicalValue(value)}
+                          </p>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </details>
+              ) : null}
 
               <label className="block space-y-xs">
                 <span className="font-label-sm text-label-sm text-on-surface-variant">
@@ -471,4 +551,205 @@ function formatDate(iso: string): string {
     timeStyle: "short",
     timeZone: "Europe/Istanbul"
   }).format(new Date(iso));
+}
+
+function normalizeEditableData(
+  item: ReviewItemData,
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  if (item.platform === "X") {
+    const mediaAssignments = parseMediaAssignments(item.mediaAssignments);
+
+    return {
+      ...data,
+      hasMedia: Boolean(data.hasMedia) || mediaAssignments.length > 0,
+      isThread: Boolean(data.isThread) || item.contentType === "x_thread",
+      linkUrl: stringValue(data.linkUrl),
+      threadItems: arrayValue(data.threadItems),
+      tweetText: stringValue(data.tweetText)
+    };
+  }
+
+  if (item.platform === "INSTAGRAM") {
+    return {
+      ...data,
+      caption: stringValue(data.caption),
+      captionStyle: stringValue(data.captionStyle) || "standard",
+      hashtags: arrayValue(data.hashtags),
+      postType: stringValue(data.postType) || "IMAGE"
+    };
+  }
+
+  return {
+    ...data,
+    categories: arrayValue(data.categories),
+    categoryIds: arrayValue(data.categoryIds),
+    contentHtml: stringValue(data.contentHtml),
+    excerpt: stringValue(data.excerpt),
+    publishStatus: stringValue(data.publishStatus) || "publish",
+    seoDescription: stringValue(data.seoDescription),
+    seoTitle: stringValue(data.seoTitle),
+    slug: stringValue(data.slug),
+    tagIds: arrayValue(data.tagIds),
+    tags: arrayValue(data.tags),
+    title: stringValue(data.title)
+  };
+}
+
+function editableFieldsForItem(
+  item: ReviewItemData,
+  data: Record<string, unknown>
+): EditField[] {
+  if (item.platform === "X") {
+    const fields: EditField[] = [
+      {
+        key: "tweetText",
+        label: "Gönderi metni",
+        type: "textarea",
+        rows: 5,
+        help: "X'te paylaşılacak ana metin. 280 karakter sınırını aşmayın."
+      },
+      {
+        key: "linkUrl",
+        label: "Bağlantı URL'si",
+        type: "text",
+        help: "Opsiyonel. Doluysa gönderi metninin sonuna eklenir."
+      }
+    ];
+
+    if (Boolean(data.isThread) || arrayValue(data.threadItems).length > 0) {
+      fields.push({
+        key: "threadItems",
+        label: "Ek tweetler",
+        type: "lines",
+        rows: 4,
+        help: "Her satır ayrı ek tweet olarak saklanır. Otomatik thread yayını şu an desteklenmiyorsa ana metni tek gönderi olarak düzenleyin."
+      });
+    }
+
+    return fields;
+  }
+
+  if (item.platform === "INSTAGRAM") {
+    return [
+      {
+        key: "caption",
+        label: "Açıklama metni",
+        type: "textarea",
+        rows: 6
+      },
+      {
+        key: "hashtags",
+        label: "Hashtagler",
+        type: "tags",
+        help: "Virgülle ayırın. # işareti yazmanız gerekmez."
+      }
+    ];
+  }
+
+  return [
+    { key: "title", label: "Başlık", type: "text" },
+    { key: "slug", label: "URL kısa adı", type: "text" },
+    { key: "contentHtml", label: "İçerik", type: "textarea", rows: 8 },
+    { key: "excerpt", label: "Özet", type: "textarea", rows: 3 },
+    { key: "seoTitle", label: "SEO başlığı", type: "text" },
+    {
+      key: "seoDescription",
+      label: "SEO açıklaması",
+      type: "textarea",
+      rows: 3
+    },
+    {
+      key: "categories",
+      label: "Kategoriler",
+      type: "tags",
+      help: "Virgülle ayırın."
+    },
+    { key: "tags", label: "Etiketler", type: "tags", help: "Virgülle ayırın." }
+  ];
+}
+
+function uneditableTechnicalFields(data: Record<string, unknown>) {
+  const technicalKeys = new Set([
+    "captionStyle",
+    "categoryIds",
+    "hasMedia",
+    "isThread",
+    "platform",
+    "postType",
+    "publishStatus",
+    "tagIds"
+  ]);
+
+  return Object.entries(data).filter(([key]) => technicalKeys.has(key));
+}
+
+function technicalFieldLabel(key: string) {
+  const labels: Record<string, string> = {
+    captionStyle: "Açıklama stili",
+    categoryIds: "Kategori ID'leri",
+    hasMedia: "Görsel atanmış mı",
+    isThread: "Seri gönderi mi",
+    platform: "Platform",
+    postType: "Gönderi tipi",
+    publishStatus: "Yayın durumu",
+    tagIds: "Etiket ID'leri"
+  };
+
+  return labels[key] ?? key;
+}
+
+function formatTechnicalValue(value: unknown) {
+  if (typeof value === "boolean") {
+    return value ? "Evet" : "Hayır";
+  }
+
+  if (Array.isArray(value)) {
+    return value.length ? value.join(", ") : "-";
+  }
+
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  return String(value);
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
+function arrayValue(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(String).filter(Boolean);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function parseMediaAssignments(value: string): Array<{ fileId: string }> {
+  try {
+    const parsed: unknown = JSON.parse(value);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter((item): item is { fileId: string } =>
+      Boolean(
+        item &&
+        typeof item === "object" &&
+        typeof (item as { fileId?: unknown }).fileId === "string"
+      )
+    );
+  } catch {
+    return [];
+  }
 }

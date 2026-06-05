@@ -191,11 +191,7 @@ export async function publishCard(
   }
 
   if (!built) {
-    const error = new PublishError(
-      "PERMANENT",
-      "CREDENTIALS_NOT_FOUND",
-      "Hesap kimlik bilgileri bulunamadi"
-    );
+    const error = missingCredentialsError(card);
     await writeLog(card, PublishLogStatus.ERROR, "publish", null, error);
     return { ok: false, error };
   }
@@ -260,6 +256,25 @@ function xConnectionStatusFromPublishError(error: PublishError) {
   }
 
   return null;
+}
+
+function missingCredentialsError(card: CardForPublish) {
+  const platformMessage: Record<Platform, string> = {
+    [Platform.INSTAGRAM]:
+      "Instagram hesabı bulunamadı veya access token kaydı yok. Kart eski/silinmiş bir hesaba bağlı olabilir.",
+    [Platform.X]:
+      "X hesabı bulunamadı veya access token kaydı yok. Kart eski/silinmiş bir hesaba bağlı olabilir; kartı mevcut X hesabıyla yeniden oluşturun veya accountId değerini taşıyın.",
+    [Platform.WORDPRESS]:
+      "WordPress sitesi bulunamadı veya credential kaydı yok. Kart eski/silinmiş bir siteye bağlı olabilir.",
+    [Platform.CUSTOM_SITE]:
+      "Özel site bulunamadı veya API anahtarı kaydı yok. Kart eski/silinmiş bir siteye bağlı olabilir."
+  };
+
+  return new PublishError(
+    "PERMANENT",
+    "CREDENTIALS_NOT_FOUND",
+    platformMessage[card.platform]
+  );
 }
 
 async function writeLog(

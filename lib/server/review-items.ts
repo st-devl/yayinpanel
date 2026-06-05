@@ -35,14 +35,19 @@ export async function createReviewItem(
 
 /** ProcessingItem'ı onaylar → ContentCard oluşturur. */
 export async function approveItem(itemId: string) {
-  const item = await prisma.processingItem.findUnique({ where: { id: itemId } });
+  const item = await prisma.processingItem.findUnique({
+    where: { id: itemId }
+  });
 
   if (!item) throw new Error("Item bulunamadı");
   if (item.reviewStatus === ReviewItemStatus.APPROVED) {
     throw new Error("Bu içerik zaten onaylandı");
   }
 
-  const proposedData = JSON.parse(item.proposedPlatformData) as Record<string, unknown>;
+  const proposedData = JSON.parse(item.proposedPlatformData) as Record<
+    string,
+    unknown
+  >;
   const platformData = serializePlatformData(item.platform, proposedData);
 
   const mediaAssignments = JSON.parse(item.mediaAssignments) as Array<{
@@ -51,11 +56,14 @@ export async function approveItem(itemId: string) {
     order?: number;
   }>;
 
-  const primaryMedia = mediaAssignments.find((m) => m.role === "featured_image")
-    ?? mediaAssignments[0];
+  const primaryMedia =
+    mediaAssignments.find((m) => m.role === "featured_image") ??
+    mediaAssignments[0];
 
   const text = extractText(proposedData);
-  const status = item.scheduledAt ? ContentStatus.SCHEDULED : ContentStatus.DRAFT;
+  const status = item.scheduledAt
+    ? ContentStatus.SCHEDULED
+    : ContentStatus.DRAFT;
 
   const contentCard = await prisma.contentCard.create({
     data: {
@@ -121,7 +129,10 @@ export async function bulkApprove(
 ): Promise<number> {
   const where = itemIds?.length
     ? { id: { in: itemIds }, batchId }
-    : { batchId, reviewStatus: { in: [ReviewItemStatus.READY, ReviewItemStatus.EDITED] } };
+    : {
+        batchId,
+        reviewStatus: { in: [ReviewItemStatus.READY, ReviewItemStatus.EDITED] }
+      };
 
   const items = await prisma.processingItem.findMany({ where });
   let approved = 0;
@@ -154,7 +165,9 @@ export async function bulkReject(
 
 // --- Yardımcılar ---
 
-function platformStringToEnum(platform: "website" | "instagram" | "x"): Platform {
+function platformStringToEnum(
+  platform: "website" | "instagram" | "x"
+): Platform {
   if (platform === "instagram") return Platform.INSTAGRAM;
   if (platform === "x") return Platform.X;
   return Platform.CUSTOM_SITE;
@@ -179,13 +192,17 @@ function buildProposedPlatformData(
 
   if (item.platform === "instagram") {
     return {
-      postType: item.contentType === "instagram_carousel" ? "CAROUSEL" : "IMAGE",
+      caption: item.caption ?? "",
+      postType:
+        item.contentType === "instagram_carousel" ? "CAROUSEL" : "IMAGE",
       hashtags: item.hashtags ?? [],
       captionStyle: "standard"
     };
   }
 
   return {
+    tweetText: item.tweetText ?? "",
+    threadItems: item.threadItems ?? [],
     linkUrl: "",
     hasMedia: item.media.length > 0,
     isThread: item.contentType === "x_thread"
@@ -195,7 +212,17 @@ function buildProposedPlatformData(
 function extractText(data: Record<string, unknown>): string {
   if (typeof data.title === "string" && data.title) return data.title;
   if (typeof data.caption === "string" && data.caption) {
-    return data.caption.slice(0, 200);
+    return data.caption;
+  }
+  if (typeof data.tweetText === "string" && data.tweetText) {
+    const linkUrl = typeof data.linkUrl === "string" ? data.linkUrl.trim() : "";
+    const tweetText = data.tweetText.trim();
+
+    if (linkUrl && !tweetText.includes(linkUrl)) {
+      return `${tweetText}\n${linkUrl}`;
+    }
+
+    return tweetText;
   }
   return "";
 }
