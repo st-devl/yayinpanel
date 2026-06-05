@@ -123,6 +123,43 @@ export async function scheduleContentCard(id: string, scheduledAt: Date) {
   });
 }
 
+/**
+ * Birden fazla karti toplu olarak planlar. Her kart icin ayri bir scheduledAt
+ * verilebilir (araliklarla yayinlama icin). Yalnizca yayinlanmamis ve
+ * yayinlanmamakta olan kartlar guncellenir; PUBLISHED/PUBLISHING kartlar atlanir.
+ * Gercekte guncellenen kart sayisini dondurur.
+ */
+export async function bulkScheduleContentCards(
+  entries: Array<{ id: string; scheduledAt: Date }>
+) {
+  if (entries.length === 0) {
+    return { updated: 0 };
+  }
+
+  const results = await prisma.$transaction(
+    entries.map((entry) =>
+      prisma.contentCard.updateMany({
+        where: {
+          id: entry.id,
+          status: {
+            notIn: [ContentStatus.PUBLISHED, ContentStatus.PUBLISHING]
+          }
+        },
+        data: {
+          scheduledAt: entry.scheduledAt,
+          status: ContentStatus.SCHEDULED,
+          nextAttemptAt: null,
+          errorCode: null,
+          errorMessage: null
+        }
+      })
+    )
+  );
+
+  const updated = results.reduce((sum, result) => sum + result.count, 0);
+  return { updated };
+}
+
 export async function updateContentCard(
   id: string,
   input: {

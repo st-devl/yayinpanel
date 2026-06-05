@@ -144,6 +144,9 @@ export default function ContentPage() {
   const [editText, setEditText] = useState("");
   const [scheduleCard, setScheduleCard] = useState<ContentCard | null>(null);
   const [scheduleValue, setScheduleValue] = useState("");
+  const [bulkStartAt, setBulkStartAt] = useState("");
+  const [bulkIntervalMinutes, setBulkIntervalMinutes] = useState("30");
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
   const accountLabelById = useMemo(
     () =>
@@ -339,6 +342,71 @@ export default function ContentPage() {
     );
     setScheduleCard(null);
     setScheduleValue("");
+  }
+
+  const eligibleCards = cards.filter(
+    (card) => card.status !== "PUBLISHED" && card.status !== "PUBLISHING"
+  );
+
+  async function bulkPublish(mode: "now" | "interval") {
+    const cardIds = eligibleCards.map((card) => card.id);
+    if (cardIds.length === 0) return;
+
+    let intervalMinutes: number | undefined;
+    if (mode === "interval") {
+      intervalMinutes = Number(bulkIntervalMinutes);
+      if (!Number.isInteger(intervalMinutes) || intervalMinutes <= 0) {
+        setRequestState({
+          tone: "error",
+          message: "Geçerli bir aralık (dakika) girin."
+        });
+        return;
+      }
+    }
+
+    const confirmMessage =
+      mode === "now"
+        ? `${cardIds.length} içerik hemen yayına alınsın mı?`
+        : `${cardIds.length} içerik ${intervalMinutes} dakika aralıklarla yayına alınsın mı?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    setBulkSubmitting(true);
+    try {
+      const response = await fetch("/api/content/bulk", {
+        body: JSON.stringify({
+          cardIds,
+          mode,
+          startAt: mode === "interval" && bulkStartAt ? bulkStartAt : undefined,
+          intervalMinutes
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST"
+      });
+      const payload = (await response.json()) as {
+        data?: { updated: number; total: number };
+        error?: string;
+      };
+
+      if (!response.ok || !payload.data) {
+        throw new Error(payload.error ?? "Toplu işlem başarısız.");
+      }
+
+      setRequestState({
+        tone: "success",
+        message:
+          mode === "now"
+            ? `${payload.data.updated} içerik yayına alındı.`
+            : `${payload.data.updated} içerik ${intervalMinutes} dakika aralıklarla planlandı.`
+      });
+      await refreshCards();
+    } catch (error) {
+      setRequestState({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Toplu işlem başarısız."
+      });
+    } finally {
+      setBulkSubmitting(false);
+    }
   }
 
   return (
@@ -656,6 +724,70 @@ export default function ContentPage() {
             );
           })}
         </section>
+
+        {!loading && eligibleCards.length > 0 ? (
+          <section className="sticky bottom-0 z-40 -mx-md panel-card flex flex-col gap-md border-t border-outline-variant bg-surface/95 p-md shadow-panel backdrop-blur md:flex-row md:items-end md:justify-between">
+            <div className="flex items-center gap-sm">
+              <MaterialIcon name="rocket_launch" className="text-primary" />
+              <div>
+                <p className="font-label-md text-label-md">Toplu Yayına Al</p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">
+                  Filtredeki {eligibleCards.length} uygun içerik (yayınlanmış
+                  olanlar hariç).
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-md">
+              <button
+                className="primary-button px-md py-sm font-label-md text-label-md disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                disabled={bulkSubmitting}
+                onClick={() => bulkPublish("now")}
+              >
+                <MaterialIcon name="send" size={18} />
+                Tümünü Yayınla
+              </button>
+
+              <div className="flex items-end gap-sm rounded-lg border border-outline-variant p-sm">
+                <label className="flex flex-col gap-xs">
+                  <span className="px-1 font-label-sm text-label-sm text-on-surface-variant">
+                    Başlangıç (boş = şimdi)
+                  </span>
+                  <input
+                    className="input-surface rounded-lg px-3 py-2 font-body-sm text-body-sm"
+                    type="datetime-local"
+                    value={bulkStartAt}
+                    onChange={(event) => setBulkStartAt(event.target.value)}
+                  />
+                </label>
+                <label className="flex flex-col gap-xs">
+                  <span className="px-1 font-label-sm text-label-sm text-on-surface-variant">
+                    Aralık (dk)
+                  </span>
+                  <input
+                    className="input-surface w-24 rounded-lg px-3 py-2 font-body-sm text-body-sm"
+                    type="number"
+                    min={1}
+                    value={bulkIntervalMinutes}
+                    onChange={(event) =>
+                      setBulkIntervalMinutes(event.target.value)
+                    }
+                  />
+                </label>
+                <button
+                  className="secondary-button px-md py-sm font-label-md text-label-md disabled:cursor-not-allowed disabled:opacity-50"
+                  type="button"
+                  disabled={bulkSubmitting}
+                  onClick={() => bulkPublish("interval")}
+                >
+                  <MaterialIcon name="schedule_send" size={18} />
+                  Aralıklarla Yayınla
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {editCard ? (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-md">
