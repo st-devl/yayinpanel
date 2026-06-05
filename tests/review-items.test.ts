@@ -1,7 +1,11 @@
 import { AIProviderType, Platform } from "@prisma/client";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import type { ProcessedContent } from "@/lib/ai/types";
-import { approveItem, createReviewItem } from "@/lib/server/review-items";
+import {
+  approveItem,
+  bulkDelete,
+  createReviewItem
+} from "@/lib/server/review-items";
 import { prisma } from "@/lib/server/prisma";
 
 const testBatchIds = new Set<string>();
@@ -156,5 +160,46 @@ describe("review items", () => {
     testCardIds.add(card.id);
 
     expect(card.text).toBe("Özetten gelen X metni");
+  });
+
+  it("bulk deletes only non-approved review items", async () => {
+    const batch = await createTestBatch(Platform.X);
+    const firstItemId = await createReviewItem(batch.id, {
+      aiNotes: "",
+      confidence: 0.8,
+      confidenceLevel: "MEDIUM",
+      contentType: "x_post",
+      media: [],
+      platform: "x",
+      scheduledAt: null,
+      scheduleIsInferred: false,
+      targetAccountId: batch.accountId,
+      tweetText: "Silinecek metin",
+      warnings: []
+    } satisfies ProcessedContent);
+    const secondItemId = await createReviewItem(batch.id, {
+      aiNotes: "",
+      confidence: 0.9,
+      confidenceLevel: "HIGH",
+      contentType: "x_post",
+      media: [],
+      platform: "x",
+      scheduledAt: null,
+      scheduleIsInferred: false,
+      targetAccountId: batch.accountId,
+      tweetText: "Onaylı kalacak metin",
+      warnings: []
+    } satisfies ProcessedContent);
+
+    const approvedCard = await approveItem(secondItemId);
+    testCardIds.add(approvedCard.id);
+
+    await expect(bulkDelete(batch.id)).resolves.toBe(1);
+    await expect(
+      prisma.processingItem.findUnique({ where: { id: firstItemId } })
+    ).resolves.toBeNull();
+    await expect(
+      prisma.processingItem.findUnique({ where: { id: secondItemId } })
+    ).resolves.toMatchObject({ reviewStatus: "APPROVED" });
   });
 });

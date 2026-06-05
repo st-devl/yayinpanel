@@ -94,6 +94,7 @@ export function ReviewCard({
   const firstMedia = mediaAssignments[0];
   const isApproved = item.reviewStatus === "APPROVED";
   const isRejected = item.reviewStatus === "REJECTED";
+  const canSelect = ["READY", "EDITED", "PENDING"].includes(item.reviewStatus);
   const statusTone = REVIEW_STATUS_TONES[item.reviewStatus] ?? "neutral";
 
   return (
@@ -123,14 +124,23 @@ export function ReviewCard({
 
       <div className="flex flex-1 flex-col gap-sm p-md">
         <div className="flex items-start gap-sm">
-          <input
-            type="checkbox"
-            className="mt-1 shrink-0"
-            checked={selected}
-            onChange={() => onSelect(item.id)}
-            disabled={isApproved || isRejected}
+          <label
+            className={`mt-0.5 flex min-h-8 shrink-0 items-center gap-xs rounded-md border border-outline-variant px-xs py-1 font-label-sm text-label-sm ${
+              canSelect
+                ? "cursor-pointer hover:bg-surface-container-low"
+                : "cursor-not-allowed opacity-50"
+            }`}
             aria-label="İçeriği seç"
-          />
+          >
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={selected}
+              onChange={() => onSelect(item.id)}
+              disabled={!canSelect}
+            />
+            <span>{selected ? "Seçildi" : "Seç"}</span>
+          </label>
           <div className="min-w-0 flex-1">
             <div className="mb-xs flex items-center justify-between gap-sm">
               <StatusBadge tone={statusTone}>

@@ -9,6 +9,7 @@ type BulkActionBarProps = {
   onDeselectAll: () => void;
   onBulkApprove: (ids?: string[]) => void;
   onBulkReject: (ids?: string[]) => void;
+  onBulkDelete: (ids?: string[]) => void;
   busy: boolean;
 };
 
@@ -19,6 +20,7 @@ export function BulkActionBar({
   onDeselectAll,
   onBulkApprove,
   onBulkReject,
+  onBulkDelete,
   busy
 }: BulkActionBarProps) {
   const hasSelection = selectedIds.length > 0;
@@ -50,6 +52,15 @@ export function BulkActionBar({
           <MaterialIcon name="check_circle" size={16} />
           Tümünü Onayla
         </button>
+        <button
+          type="button"
+          className="secondary-button px-md py-sm font-label-sm text-label-sm text-error hover:bg-error-container/20 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={busy}
+          onClick={() => onBulkDelete()}
+        >
+          <MaterialIcon name="delete" size={16} />
+          Tümünü Sil
+        </button>
 
         {hasSelection && (
           <>
@@ -70,6 +81,15 @@ export function BulkActionBar({
             >
               <MaterialIcon name="block" size={16} />
               Seçilenleri Reddet
+            </button>
+            <button
+              type="button"
+              className="secondary-button px-md py-sm font-label-sm text-label-sm text-error hover:bg-error-container/20 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={busy}
+              onClick={() => onBulkDelete(selectedIds)}
+            >
+              <MaterialIcon name="delete" size={16} />
+              Seçilenleri Sil ({selectedIds.length})
             </button>
           </>
         )}

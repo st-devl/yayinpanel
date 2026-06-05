@@ -163,6 +163,26 @@ export async function bulkReject(
   });
 }
 
+export async function bulkDelete(
+  batchId: string,
+  itemIds?: string[]
+): Promise<number> {
+  const deletableStatuses: ReviewItemStatus[] = [
+    ReviewItemStatus.PENDING,
+    ReviewItemStatus.READY,
+    ReviewItemStatus.EDITED,
+    ReviewItemStatus.ERROR
+  ];
+  const where = itemIds?.length
+    ? { id: { in: itemIds }, batchId, reviewStatus: { in: deletableStatuses } }
+    : { batchId, reviewStatus: { in: deletableStatuses } };
+
+  const result = await prisma.processingItem.deleteMany({ where });
+  await updateBatchApprovedCount(batchId);
+
+  return result.count;
+}
+
 // --- Yardımcılar ---
 
 function platformStringToEnum(

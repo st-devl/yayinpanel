@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { MaterialIcon } from "@/components/material-icon";
@@ -74,10 +74,21 @@ export default function ReviewPage() {
     }
   }
 
-  const pendingItems =
-    batch?.items.filter((i) =>
-      ["READY", "EDITED", "PENDING"].includes(i.reviewStatus)
-    ) ?? [];
+  const pendingItems = useMemo(
+    () =>
+      batch?.items.filter((i) =>
+        ["READY", "EDITED", "PENDING"].includes(i.reviewStatus)
+      ) ?? [],
+    [batch?.items]
+  );
+  const selectableIds = useMemo(
+    () => new Set(pendingItems.map((item) => item.id)),
+    [pendingItems]
+  );
+  const selectedPendingIds = useMemo(
+    () => selectedIds.filter((id) => selectableIds.has(id)),
+    [selectedIds, selectableIds]
+  );
 
   const hasAmbiguousSchedule = pendingItems.some(
     (i) =>
@@ -86,6 +97,10 @@ export default function ReviewPage() {
   );
 
   function toggleSelect(id: string) {
+    if (!selectableIds.has(id)) {
+      return;
+    }
+
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
@@ -170,6 +185,46 @@ export default function ReviewPage() {
       });
       await loadBatch();
       setSelectedIds([]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function bulkDelete(ids?: string[]) {
+    const count = ids?.length ?? pendingItems.length;
+
+    if (count === 0) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        ids?.length
+          ? `${count} seçili içerik silinsin mi?`
+          : `${count} onay bekleyen içerik silinsin mi?`
+      )
+    ) {
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      const res = await fetch(`/api/batches/${batchId}/bulk-delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemIds: ids })
+      });
+      const payload = (await res.json()) as { error?: string };
+
+      if (!res.ok) {
+        throw new Error(payload.error ?? "Toplu silme başarısız.");
+      }
+
+      await loadBatch();
+      setSelectedIds([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Toplu silme başarısız.");
     } finally {
       setBusy(false);
     }
@@ -311,11 +366,12 @@ export default function ReviewPage() {
         {pendingItems.length > 0 && (
           <BulkActionBar
             totalCount={pendingItems.length}
-            selectedIds={selectedIds}
+            selectedIds={selectedPendingIds}
             onSelectAll={selectAll}
             onDeselectAll={deselectAll}
             onBulkApprove={bulkApprove}
             onBulkReject={bulkReject}
+            onBulkDelete={bulkDelete}
             busy={busy}
           />
         )}
@@ -334,7 +390,7 @@ export default function ReviewPage() {
               <ReviewCard
                 key={item.id}
                 item={item}
-                selected={selectedIds.includes(item.id)}
+                selected={selectedPendingIds.includes(item.id)}
                 onSelect={toggleSelect}
                 onApprove={approveItem}
                 onReject={rejectItem}
