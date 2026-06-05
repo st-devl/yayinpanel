@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { verifyXToken } from "@/lib/integrations/x-oauth";
+import { verifyXToken, X_OAUTH_SCOPES } from "@/lib/integrations/x-oauth";
 
 describe("X OAuth token verification", () => {
   afterEach(() => {
@@ -56,6 +56,22 @@ describe("X OAuth token verification", () => {
       status: 429,
       message: "X API rate limit asildi. Bir sure sonra tekrar deneyin."
     });
+  });
+});
+
+describe("X OAuth scopes", () => {
+  it("requests every scope needed for posting, media upload and refresh", () => {
+    const scopes = new Set(X_OAUTH_SCOPES.split(" "));
+
+    expect(scopes).toEqual(
+      new Set([
+        "tweet.read",
+        "tweet.write",
+        "users.read",
+        "media.write",
+        "offline.access"
+      ])
+    );
   });
 });
 

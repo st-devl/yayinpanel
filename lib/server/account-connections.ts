@@ -88,7 +88,12 @@ export async function testXConnection(
 
   if (result.ok) {
     await setXConnectionStatus(accountId, ConnectionStatus.CONNECTED);
-    return { ok: true, connectionStatus: ConnectionStatus.CONNECTED };
+    return {
+      ok: true,
+      connectionStatus: ConnectionStatus.CONNECTED,
+      message:
+        "X kullanıcı tokenı doğrulandı. Gönderim için X uygulaması Read and write izinli olmalı ve hesap tweet.write kapsamıyla yeniden bağlanmış olmalı."
+    };
   }
 
   const connectionStatus = statusFromHttp(result.status);

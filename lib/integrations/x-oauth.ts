@@ -5,9 +5,9 @@ import { getXOAuthCredentials } from "@/lib/server/x-credentials";
 import { classifyHttpStatus, permanentError } from "@/lib/publishers/errors";
 import { fetchWithTimeout, readJsonResponse } from "@/lib/publishers/http";
 
-const X_TOKEN_URL = "https://api.twitter.com/2/oauth2/token";
-const X_ME_URL = "https://api.twitter.com/2/users/me";
-const X_AUTHORIZE_URL = "https://twitter.com/i/oauth2/authorize";
+const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
+const X_ME_URL = "https://api.x.com/2/users/me";
+const X_AUTHORIZE_URL = "https://x.com/i/oauth2/authorize";
 
 /**
  * Tweet atmak icin user-context gerekir. offline.access refresh token saglar;
@@ -17,6 +17,7 @@ export const X_OAUTH_SCOPES = [
   "tweet.read",
   "tweet.write",
   "users.read",
+  "media.write",
   "offline.access"
 ].join(" ");
 

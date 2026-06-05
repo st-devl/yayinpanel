@@ -51,6 +51,26 @@ describe("XPublisher (mock API)", () => {
     });
   });
 
+  it("explains generic 403 tweet permission failures", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse(
+        {
+          detail: "Forbidden",
+          status: 403,
+          title: "Forbidden",
+          type: "about:blank"
+        },
+        403
+      )
+    );
+
+    await expect(new XPublisher().publish(xContext)).rejects.toMatchObject({
+      kind: "AUTH",
+      code: "X_TWEET_FAILED",
+      message: expect.stringContaining("Read and write")
+    });
+  });
+
   it("classifies 429 as TRANSIENT error", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       jsonResponse({ detail: "Too Many Requests" }, 429)
@@ -58,6 +78,52 @@ describe("XPublisher (mock API)", () => {
 
     await expect(new XPublisher().publish(xContext)).rejects.toMatchObject({
       kind: "TRANSIENT"
+    });
+  });
+
+  it("uploads media through the X API v2 media endpoint", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (url, init) => {
+        const href = String(url);
+
+        if (href.endsWith("/media/upload")) {
+          expect(init?.method).toBe("POST");
+          expect(init?.headers).toEqual({
+            Authorization: "Bearer token"
+          });
+          expect(init?.body).toBeInstanceOf(FormData);
+          expect((init?.body as FormData).get("media_category")).toBe(
+            "tweet_image"
+          );
+          expect((init?.body as FormData).get("media_type")).toBe("image/png");
+          return jsonResponse({ data: { id: "media-1" } });
+        }
+
+        expect(href.endsWith("/tweets")).toBe(true);
+        expect(JSON.parse(String(init?.body))).toEqual({
+          media: { media_ids: ["media-1"] },
+          text: "Merhaba dunya"
+        });
+        return jsonResponse({ data: { id: "tweet-1" } });
+      });
+
+    const result = await new XPublisher().publish({
+      ...xContext,
+      card: { ...xContext.card, mediaFileId: "media-file-1" },
+      loadMedia: async () => ({
+        buffer: Buffer.from("image"),
+        fileName: "image.png",
+        fileSize: 5,
+        mimeType: "image/png"
+      })
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.externalPostId).toBe("tweet-1");
+    expect(result.apiResponse).toMatchObject({
+      mediaIds: ["media-1"],
+      tweetId: "tweet-1"
     });
   });
 });

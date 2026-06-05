@@ -191,11 +191,25 @@ export async function runSchedulerTick(options?: {
     await sendTelegramNotification({
       kind: error.isTransient ? "RETRY_EXHAUSTED" : "PUBLISH_FAILED",
       detail: `Kart ${card.id} yayinlanamadi: ${error.message}`,
-      action: error.isAuth
-        ? "Ilgili hesabin tokenini yenileyin."
-        : "Icerigi kontrol edip tekrar planlayin."
+      action: publishFailureAction(error)
     });
   }
 
   return result;
+}
+
+function publishFailureAction(error: {
+  code: string;
+  httpStatus?: number;
+  isAuth: boolean;
+}) {
+  if (error.code.startsWith("X_") && error.httpStatus === 403) {
+    return "X Developer Portal'da uygulama izinlerini Read and write yapin ve hesabi X ile yeniden baglayin.";
+  }
+
+  if (error.isAuth) {
+    return "Ilgili hesabin tokenini yenileyin.";
+  }
+
+  return "Icerigi kontrol edip tekrar planlayin.";
 }

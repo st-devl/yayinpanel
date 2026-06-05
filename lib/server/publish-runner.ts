@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Platform, PublishLogStatus } from "@prisma/client";
+import { ConnectionStatus, Platform, PublishLogStatus } from "@prisma/client";
 import { parsePlatformData } from "@/lib/domain/platform-data-store";
 import { PublishError } from "@/lib/publishers/errors";
 import { runPublish } from "@/lib/publishers";
@@ -12,6 +12,7 @@ import {
   getInstagramAccessToken,
   getWordPressCredentials,
   getXTokens,
+  setXConnectionStatus,
   updateInstagramAccessToken,
   updateXTokens
 } from "@/lib/server/account-credentials";
@@ -219,9 +220,46 @@ export async function publishCard(
       outcome.error.apiResponse,
       outcome.error
     );
+    await updateConnectionStatusFromPublishError(card, outcome.error);
   }
 
   return outcome;
+}
+
+async function updateConnectionStatusFromPublishError(
+  card: CardForPublish,
+  error: PublishError
+) {
+  if (card.platform !== Platform.X || !error.isAuth) {
+    return;
+  }
+
+  const connectionStatus = xConnectionStatusFromPublishError(error);
+
+  if (!connectionStatus) {
+    return;
+  }
+
+  try {
+    await setXConnectionStatus(card.accountId, connectionStatus, error.message);
+  } catch (statusError) {
+    console.error(
+      "Failed to update X account connection status after publish error",
+      statusError
+    );
+  }
+}
+
+function xConnectionStatusFromPublishError(error: PublishError) {
+  if (error.httpStatus === 401) {
+    return ConnectionStatus.TOKEN_EXPIRED;
+  }
+
+  if (error.httpStatus === 403) {
+    return ConnectionStatus.PERMISSION_MISSING;
+  }
+
+  return null;
 }
 
 async function writeLog(

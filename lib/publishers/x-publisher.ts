@@ -5,12 +5,17 @@ import { classifyHttpStatus, permanentError } from "@/lib/publishers/errors";
 import { fetchWithTimeout, readJsonResponse } from "@/lib/publishers/http";
 import type {
   PublishContext,
+  PublishMedia,
   PublishResult,
   Publisher
 } from "@/lib/publishers/types";
 
-const X_API_BASE = "https://api.twitter.com/2";
-const X_UPLOAD_BASE = "https://upload.twitter.com/1.1";
+const X_API_BASE = "https://api.x.com/2";
+
+const X_TWEET_PERMISSION_MESSAGE =
+  "X gönderim izni reddedildi. X Developer Portal'da uygulama izinlerini Read and write yapın; ardından hesabı tweet.write/users.read kapsamlarıyla yeniden bağlayın.";
+const X_MEDIA_PERMISSION_MESSAGE =
+  "X medya yükleme izni reddedildi. X Developer Portal'da uygulama izinlerini Read and write yapın; ardından hesabı media.write kapsamıyla yeniden bağlayın.";
 
 /**
  * X (Twitter) publisher.
@@ -55,35 +60,47 @@ export class XPublisher implements Publisher {
 
   private async uploadMedia(
     accessToken: string,
-    media: { buffer: Buffer; mimeType: string }
+    media: PublishMedia
   ): Promise<string> {
+    const mediaCategory = mediaCategoryForMimeType(media.mimeType);
+
+    if (!mediaCategory) {
+      throw permanentError(
+        "X_UNSUPPORTED_MEDIA_TYPE",
+        "X yalnizca JPG, PNG ve WEBP gorselleri destekler"
+      );
+    }
+
     const form = new FormData();
     form.append(
       "media",
-      new Blob([new Uint8Array(media.buffer)], { type: media.mimeType })
+      new Blob([new Uint8Array(media.buffer)], { type: media.mimeType }),
+      media.fileName
     );
+    form.append("media_category", mediaCategory);
+    form.append("media_type", media.mimeType);
 
-    const response = await fetchWithTimeout(
-      `${X_UPLOAD_BASE}/media/upload.json`,
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-        body: form
-      }
-    );
+    const response = await fetchWithTimeout(`${X_API_BASE}/media/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: form
+    });
     const result = await readJsonResponse(response);
 
     if (!result.ok) {
       throw classifyHttpStatus(
         result.status,
         "X_MEDIA_UPLOAD_FAILED",
-        "X medya yuklemesi basarisiz",
+        xMediaErrorMessage(result.status, result.json),
         result.json
       );
     }
 
-    const mediaIdString = (result.json as { media_id_string?: string })
-      ?.media_id_string;
+    const body = result.json as {
+      data?: { id?: string };
+      media_id_string?: string;
+    };
+    const mediaIdString = body?.data?.id ?? body?.media_id_string;
 
     if (!mediaIdString) {
       throw permanentError("X_MEDIA_NO_ID", "X medya id alinamadi", {
@@ -119,7 +136,7 @@ export class XPublisher implements Publisher {
       throw classifyHttpStatus(
         result.status,
         "X_TWEET_FAILED",
-        tweetErrorMessage(result.json),
+        tweetErrorMessage(result.status, result.json),
         result.json
       );
     }
@@ -136,17 +153,78 @@ export class XPublisher implements Publisher {
   }
 }
 
-function tweetErrorMessage(json: unknown): string {
+function tweetErrorMessage(status: number, json: unknown): string {
+  if (isXPermissionFailure(status, json)) {
+    return X_TWEET_PERMISSION_MESSAGE;
+  }
+
+  return xErrorMessage(json, "Tweet olusturulamadi");
+}
+
+function xMediaErrorMessage(status: number, json: unknown): string {
+  if (isXPermissionFailure(status, json)) {
+    return X_MEDIA_PERMISSION_MESSAGE;
+  }
+
+  return xErrorMessage(json, "X medya yuklemesi basarisiz");
+}
+
+function xErrorMessage(json: unknown, fallback: string): string {
   const body = json as {
     detail?: string;
     title?: string;
-    errors?: Array<{ message?: string }>;
+    errors?: Array<{ detail?: string; message?: string; title?: string }>;
   };
 
   return (
     body?.detail ??
     body?.errors?.[0]?.message ??
+    body?.errors?.[0]?.detail ??
+    body?.errors?.[0]?.title ??
     body?.title ??
-    "Tweet olusturulamadi"
+    fallback
   );
+}
+
+function isXPermissionFailure(status: number, json: unknown): boolean {
+  const body = json as {
+    detail?: string;
+    status?: number;
+    title?: string;
+    type?: string;
+    errors?: Array<{ detail?: string; message?: string; title?: string }>;
+  };
+
+  const parts = [
+    body?.type,
+    body?.title,
+    body?.detail,
+    ...(body?.errors ?? []).flatMap((error) => [
+      error.title,
+      error.detail,
+      error.message
+    ])
+  ];
+  const message = parts.filter(Boolean).join(" ").toLowerCase();
+
+  return (
+    status === 403 ||
+    message.includes("client-forbidden") ||
+    message.includes("lacks required access") ||
+    message.includes("permission") ||
+    message.includes("scope") ||
+    (body?.status === 403 && body?.detail?.toLowerCase() === "forbidden")
+  );
+}
+
+function mediaCategoryForMimeType(mimeType: string): "tweet_image" | null {
+  if (
+    mimeType === "image/jpeg" ||
+    mimeType === "image/png" ||
+    mimeType === "image/webp"
+  ) {
+    return "tweet_image";
+  }
+
+  return null;
 }

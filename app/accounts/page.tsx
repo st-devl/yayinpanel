@@ -500,6 +500,7 @@ export default function AccountsPage() {
         ok?: boolean;
         connectionStatus?: ConnectionStatus;
         deleted?: boolean;
+        message?: string;
       }>(response);
 
       if (action === "delete") {
@@ -515,7 +516,7 @@ export default function AccountsPage() {
       setRequestState({
         tone: payload.ok ? "success" : "error",
         message: payload.ok
-          ? "Bağlantı doğrulandı."
+          ? (payload.message ?? "Bağlantı doğrulandı.")
           : (payload.message ??
             payload.error ??
             `${statusLabels[payload.connectionStatus ?? "FAILED"]}: işlem başarısız.`)
@@ -755,9 +756,9 @@ export default function AccountsPage() {
                       Önerilen: X ile Bağlan
                     </p>
                     <p className="font-body-sm text-body-sm">
-                      X&apos;te yetki verin; gönderi atmak için gereken
-                      kullanıcı token&apos;ı otomatik alınır. (Tweet atmak
-                      app-only token ile çalışmaz.)
+                      X&apos;te yetki verin; gönderi atmak için OAuth2 kullanıcı
+                      token&apos;ı alınır. X uygulaması Developer Portal&apos;da
+                      Read and write izinli olmalıdır.
                     </p>
                   </div>
                   <button
