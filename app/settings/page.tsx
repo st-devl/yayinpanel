@@ -228,6 +228,17 @@ export default function SettingsPage() {
   const [aiTestResults, setAITestResults] = useState<Record<string, string>>({});
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null);
 
+  // X / Twitter API state
+  const [xOAuth, setXOAuth] = useState<{
+    clientIdSet: boolean;
+    clientSecretSet: boolean;
+    source: "database" | "env" | "none";
+    redirectUri: string;
+  } | null>(null);
+  const [xClientId, setXClientId] = useState("");
+  const [xClientSecret, setXClientSecret] = useState("");
+  const [xSaving, setXSaving] = useState(false);
+
   const counters = useMemo(
     () => [
       {
@@ -305,12 +316,69 @@ export default function SettingsPage() {
 
     loadData();
     void loadAIProviders();
+    void loadXOAuth();
 
     return () => {
       active = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function loadXOAuth() {
+    const response = await fetch("/api/settings/x-oauth");
+    if (!response.ok) return;
+    const payload = (await response.json()) as {
+      data?: {
+        clientIdSet: boolean;
+        clientSecretSet: boolean;
+        source: "database" | "env" | "none";
+        redirectUri: string;
+      };
+    };
+    if (payload.data) setXOAuth(payload.data);
+  }
+
+  async function saveXOAuth(event: FormEvent) {
+    event.preventDefault();
+    setXSaving(true);
+    setRequestState(null);
+
+    try {
+      const response = await fetch("/api/settings/x-oauth", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: xClientId || undefined,
+          clientSecret: xClientSecret || undefined
+        })
+      });
+      const payload = (await response.json()) as {
+        data?: {
+          clientIdSet: boolean;
+          clientSecretSet: boolean;
+          source: "database" | "env" | "none";
+          redirectUri: string;
+        };
+        error?: string;
+      };
+
+      if (!response.ok || !payload.data) {
+        throw new Error(payload.error ?? "X API bilgileri kaydedilemedi.");
+      }
+
+      setXOAuth(payload.data);
+      setXClientId("");
+      setXClientSecret("");
+      setRequestState({ tone: "success", message: "X API bilgileri kaydedildi." });
+    } catch (error) {
+      setRequestState({
+        tone: "error",
+        message:
+          error instanceof Error ? error.message : "X API bilgileri kaydedilemedi."
+      });
+    } finally {
+      setXSaving(false);
+    }
+  }
 
   function updateSetting(key: SettingKey, value: string) {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -533,6 +601,93 @@ export default function SettingsPage() {
               )}
             </article>
           ))}
+        </section>
+
+        <section className="panel-card p-md">
+          <div className="mb-md flex items-start gap-sm">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface-container-highest text-primary">
+              <MaterialIcon name="share" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-headline-sm text-headline-sm">
+                X / Twitter API
+              </h2>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">
+                Tweet atmak için &quot;X ile Bağlan&quot;ın çalışması adına X
+                Developer Portal&apos;dan aldığın Client ID ve Client Secret.
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-md flex flex-wrap gap-sm">
+            <StatusBadge tone={xOAuth?.clientIdSet ? "success" : "error"}>
+              Client ID: {xOAuth?.clientIdSet ? "Tanımlı" : "Eksik"}
+            </StatusBadge>
+            <StatusBadge tone={xOAuth?.clientSecretSet ? "success" : "error"}>
+              Client Secret: {xOAuth?.clientSecretSet ? "Tanımlı" : "Eksik"}
+            </StatusBadge>
+            {xOAuth && xOAuth.source !== "none" ? (
+              <StatusBadge tone="info">
+                Kaynak: {xOAuth.source === "database" ? "Panel" : "Sunucu (.env)"}
+              </StatusBadge>
+            ) : null}
+          </div>
+
+          {xOAuth?.redirectUri ? (
+            <div className="mb-md rounded-lg border border-blue-200 bg-blue-50 p-sm text-blue-900">
+              <p className="font-label-sm text-label-sm">
+                X Developer Portal → Callback URI olarak ekle:
+              </p>
+              <code className="break-all font-mono text-[12px]">
+                {xOAuth.redirectUri}
+              </code>
+            </div>
+          ) : null}
+
+          <form
+            className="grid grid-cols-1 gap-md md:grid-cols-2"
+            onSubmit={saveXOAuth}
+          >
+            <label className="flex flex-col gap-xs">
+              <span className="font-label-sm text-label-sm text-on-surface-variant">
+                Client ID {xOAuth?.clientIdSet ? "(değiştirmek için doldur)" : ""}
+              </span>
+              <input
+                className="input-surface w-full rounded-lg px-3 py-2 font-body-md text-body-md"
+                type="text"
+                autoComplete="off"
+                placeholder={xOAuth?.clientIdSet ? "•••• kayıtlı ••••" : "X Client ID"}
+                value={xClientId}
+                onChange={(event) => setXClientId(event.target.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-xs">
+              <span className="font-label-sm text-label-sm text-on-surface-variant">
+                Client Secret{" "}
+                {xOAuth?.clientSecretSet ? "(değiştirmek için doldur)" : ""}
+              </span>
+              <input
+                className="input-surface w-full rounded-lg px-3 py-2 font-body-md text-body-md"
+                type="password"
+                autoComplete="off"
+                placeholder={
+                  xOAuth?.clientSecretSet ? "•••• kayıtlı ••••" : "X Client Secret"
+                }
+                value={xClientSecret}
+                onChange={(event) => setXClientSecret(event.target.value)}
+              />
+            </label>
+            <div className="md:col-span-2 flex justify-end">
+              <button
+                className="primary-button px-md py-sm font-label-md text-label-md disabled:cursor-not-allowed disabled:opacity-60"
+                type="submit"
+                disabled={xSaving || (!xClientId && !xClientSecret)}
+              >
+                <MaterialIcon name={xSaving ? "progress_activity" : "save"} />
+                {xSaving ? "Kaydediliyor" : "X API Bilgilerini Kaydet"}
+              </button>
+            </div>
+          </form>
         </section>
 
         <section className="grid grid-cols-1 gap-md md:grid-cols-2 xl:grid-cols-4">

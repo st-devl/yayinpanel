@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/server/session";
 import { getEnv } from "@/lib/server/env";
+import { getXOAuthCredentials } from "@/lib/server/x-credentials";
 import { buildXAuthorizeUrl } from "@/lib/integrations/x-oauth";
 
 const STATE_COOKIE = "x_oauth_state";
@@ -26,7 +27,8 @@ export async function GET() {
   const env = getEnv();
   const appUrl = env.APP_BASE_URL;
 
-  if (!env.X_CLIENT_ID || !env.X_CLIENT_SECRET) {
+  const credentials = await getXOAuthCredentials();
+  if (!credentials.clientId || !credentials.clientSecret) {
     return NextResponse.redirect(
       new URL("/accounts?xoauth=config_error", appUrl)
     );
@@ -38,7 +40,7 @@ export async function GET() {
     createHash("sha256").update(codeVerifier).digest()
   );
 
-  const authorizeUrl = buildXAuthorizeUrl({ state, codeChallenge });
+  const authorizeUrl = await buildXAuthorizeUrl({ state, codeChallenge });
   const response = NextResponse.redirect(authorizeUrl);
 
   const secure = appUrl.startsWith("https://");

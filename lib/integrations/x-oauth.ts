@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getEnv } from "@/lib/server/env";
+import { getXOAuthCredentials } from "@/lib/server/x-credentials";
 import { classifyHttpStatus, permanentError } from "@/lib/publishers/errors";
 import { fetchWithTimeout, readJsonResponse } from "@/lib/publishers/http";
 
@@ -32,22 +33,22 @@ export function getXRedirectUri(): string {
 }
 
 /** Kullanicinin yetki verecegi X OAuth2 (PKCE) authorize URL'ini olusturur. */
-export function buildXAuthorizeUrl(input: {
+export async function buildXAuthorizeUrl(input: {
   state: string;
   codeChallenge: string;
-}): string {
-  const env = getEnv();
+}): Promise<string> {
+  const { clientId } = await getXOAuthCredentials();
 
-  if (!env.X_CLIENT_ID) {
+  if (!clientId) {
     throw permanentError(
       "X_OAUTH_NOT_CONFIGURED",
-      "X_CLIENT_ID tanimli olmali"
+      "X Client ID tanimli olmali (Ayarlar > X API)"
     );
   }
 
   const params = new URLSearchParams({
     response_type: "code",
-    client_id: env.X_CLIENT_ID,
+    client_id: clientId,
     redirect_uri: getXRedirectUri(),
     scope: X_OAUTH_SCOPES,
     state: input.state,
@@ -63,19 +64,19 @@ export async function exchangeXAuthCode(input: {
   code: string;
   codeVerifier: string;
 }): Promise<XTokenResponse> {
-  const env = getEnv();
+  const credentials = await getXOAuthCredentials();
   const params = new URLSearchParams({
     grant_type: "authorization_code",
     code: input.code,
     redirect_uri: getXRedirectUri(),
     code_verifier: input.codeVerifier,
-    client_id: env.X_CLIENT_ID
+    client_id: credentials.clientId
   });
 
   const response = await fetchWithTimeout(X_TOKEN_URL, {
     method: "POST",
     headers: {
-      Authorization: basicClientAuth(),
+      Authorization: basicClientAuth(credentials),
       "Content-Type": "application/x-www-form-urlencoded"
     },
     body: params.toString()
@@ -94,18 +95,19 @@ export async function exchangeXAuthCode(input: {
   return parseTokenResponse(result.json);
 }
 
-function basicClientAuth() {
-  const env = getEnv();
-
-  if (!env.X_CLIENT_ID || !env.X_CLIENT_SECRET) {
+function basicClientAuth(credentials: {
+  clientId: string;
+  clientSecret: string;
+}) {
+  if (!credentials.clientId || !credentials.clientSecret) {
     throw permanentError(
       "X_OAUTH_NOT_CONFIGURED",
-      "X_CLIENT_ID ve X_CLIENT_SECRET tanimli olmali"
+      "X Client ID ve Client Secret tanimli olmali (Ayarlar > X API)"
     );
   }
 
   const token = Buffer.from(
-    `${env.X_CLIENT_ID}:${env.X_CLIENT_SECRET}`
+    `${credentials.clientId}:${credentials.clientSecret}`
   ).toString("base64");
 
   return `Basic ${token}`;
@@ -115,17 +117,17 @@ function basicClientAuth() {
 export async function refreshXAccessToken(
   refreshToken: string
 ): Promise<XTokenResponse> {
-  const env = getEnv();
+  const credentials = await getXOAuthCredentials();
   const params = new URLSearchParams({
     grant_type: "refresh_token",
     refresh_token: refreshToken,
-    client_id: env.X_CLIENT_ID
+    client_id: credentials.clientId
   });
 
   const response = await fetchWithTimeout(X_TOKEN_URL, {
     method: "POST",
     headers: {
-      Authorization: basicClientAuth(),
+      Authorization: basicClientAuth(credentials),
       "Content-Type": "application/x-www-form-urlencoded"
     },
     body: params.toString()
