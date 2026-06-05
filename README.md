@@ -132,3 +132,8 @@ Scriptler 14 gunden eski kendi yedeklerini temizler. `.env` ve
 - Scheduler sorgulari status ve tarih indexleri uzerinden calisir.
 - Medya binaryleri API uzerinden kisitli cache headerlariyla servis edilir.
 - Yakin donem buyumede SQLite yerine PostgreSQL'e gecis degerlendirilmelidir.
+
+
+
+Mac’te: npm run deploy
+SSH ile sunucudaysan: cd /opt/patlat && git pull --ff-only && docker compose up -d --build
