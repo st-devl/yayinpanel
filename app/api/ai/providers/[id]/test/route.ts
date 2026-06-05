@@ -29,9 +29,12 @@ export async function POST(_request: NextRequest, context: RouteContext) {
     const response = await provider.complete(
       [
         {
+          role: "system",
+          content: "Sadece geçerli JSON nesnesi döndür. Başka metin ekleme."
+        },
+        {
           role: "user",
-          content:
-            'Merhaba. Bağlantı testiyim. Sadece şunu döndür: {"ok":true}'
+          content: 'Merhaba. Bağlantı testiyim. Sadece bu JSON değerini döndür: {"ok":true}'
         }
       ],
       { maxTokens: 50 }
