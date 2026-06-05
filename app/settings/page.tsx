@@ -43,7 +43,7 @@ const AI_PROVIDER_LABELS: Record<AIProviderType, string> = {
 const AI_PROVIDER_MODELS: Record<AIProviderType, string[]> = {
   OPENAI: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
   ANTHROPIC: ["claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5-20251001"],
-  GOOGLE: ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"],
+  GOOGLE: ["gemini-2.5-flash-lite", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"],
   XAI: ["grok-beta", "grok-vision-beta"],
   GROQ: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"],
   CUSTOM: []

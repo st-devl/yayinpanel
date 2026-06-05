@@ -100,7 +100,7 @@ export async function verifyXToken(accessToken: string): Promise<{
     return {
       ok: false,
       status: result.status,
-      message: "X token dogrulama basarisiz"
+      message: xTokenVerificationMessage(result.status)
     };
   }
 
@@ -113,4 +113,20 @@ export async function verifyXToken(accessToken: string): Promise<{
     userId: data?.id,
     username: data?.username
   };
+}
+
+function xTokenVerificationMessage(status: number) {
+  if (status === 401) {
+    return "X access token gecersiz veya suresi dolmus. OAuth2 user access token ile yeniden baglayin.";
+  }
+
+  if (status === 403) {
+    return "X access token gerekli izinlere sahip degil. users.read izniyle OAuth2 token olusturun.";
+  }
+
+  if (status === 429) {
+    return "X API rate limit asildi. Bir sure sonra tekrar deneyin.";
+  }
+
+  return `X token dogrulama basarisiz (HTTP ${status})`;
 }
