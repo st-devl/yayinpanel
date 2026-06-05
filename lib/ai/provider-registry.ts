@@ -5,6 +5,7 @@ import { prisma } from "@/lib/server/prisma";
 import type { AIProviderInterface } from "@/lib/ai/provider-interface";
 import { AnthropicProvider } from "@/lib/ai/providers/anthropic";
 import { GoogleProvider } from "@/lib/ai/providers/google";
+import { GroqProvider } from "@/lib/ai/providers/groq";
 import { OpenAIProvider } from "@/lib/ai/providers/openai";
 import { XAIProvider } from "@/lib/ai/providers/xai";
 
@@ -66,6 +67,8 @@ export function buildProvider(record: {
       return new GoogleProvider(config);
     case "XAI":
       return new XAIProvider(config);
+    case "GROQ":
+      return new GroqProvider(config);
     case "CUSTOM":
       return new OpenAIProvider(config);
     default:

@@ -11,7 +11,7 @@ type SettingKey =
   | "BACKUP_PATH"
   | "TELEGRAM_ENABLED";
 
-type AIProviderType = "OPENAI" | "ANTHROPIC" | "GOOGLE" | "XAI" | "CUSTOM";
+type AIProviderType = "OPENAI" | "ANTHROPIC" | "GOOGLE" | "XAI" | "GROQ" | "CUSTOM";
 
 type AIProvider = {
   id: string;
@@ -36,6 +36,7 @@ const AI_PROVIDER_LABELS: Record<AIProviderType, string> = {
   ANTHROPIC: "Anthropic Claude",
   GOOGLE: "Google Gemini",
   XAI: "xAI Grok",
+  GROQ: "Groq",
   CUSTOM: "Özel (Custom)"
 };
 
@@ -44,6 +45,7 @@ const AI_PROVIDER_MODELS: Record<AIProviderType, string[]> = {
   ANTHROPIC: ["claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5-20251001"],
   GOOGLE: ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"],
   XAI: ["grok-beta", "grok-vision-beta"],
+  GROQ: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"],
   CUSTOM: []
 };
 

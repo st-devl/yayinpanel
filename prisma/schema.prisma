@@ -46,6 +46,7 @@ enum AIProviderType {
   ANTHROPIC
   GOOGLE
   XAI
+  GROQ
   CUSTOM
 }
 
