@@ -103,12 +103,6 @@ export async function updateAIProvider(
 }
 
 export async function deleteAIProvider(id: string): Promise<void> {
-  const count = await prisma.aIProvider.count();
-
-  if (count <= 1) {
-    throw new Error("Son sağlayıcı silinemez");
-  }
-
   const provider = await prisma.aIProvider.findUnique({ where: { id } });
 
   if (!provider) {
@@ -118,7 +112,10 @@ export async function deleteAIProvider(id: string): Promise<void> {
   await prisma.aIProvider.delete({ where: { id } });
 
   if (provider.isDefault) {
-    const next = await prisma.aIProvider.findFirst({ orderBy: { createdAt: "asc" } });
+    const next = await prisma.aIProvider.findFirst({
+      where: { id: { not: id } },
+      orderBy: { createdAt: "asc" }
+    });
     if (next) {
       await prisma.aIProvider.update({ where: { id: next.id }, data: { isDefault: true } });
     }

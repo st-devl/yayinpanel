@@ -384,10 +384,16 @@ export default function SettingsPage() {
     if (!window.confirm("Bu sağlayıcı silinsin mi?")) return;
 
     try {
-      await fetch(`/api/ai/providers/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/ai/providers/${id}`, { method: "DELETE" });
+      const payload = (await res.json()) as { deleted?: boolean; error?: string };
+
+      if (!res.ok) {
+        throw new Error(payload.error ?? "Sağlayıcı silinemedi.");
+      }
+
       await loadAIProviders();
-    } catch {
-      setAIError("Silinemedi.");
+    } catch (err) {
+      setAIError(err instanceof Error ? err.message : "Sağlayıcı silinemedi.");
     }
   }
 
