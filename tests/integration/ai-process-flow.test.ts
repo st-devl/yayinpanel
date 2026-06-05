@@ -1,7 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { processWebsiteBatch } from "@/lib/ai/content-processor";
+import { describe, expect, it } from "vitest";
+import { processWebsiteBatch, processXBatch } from "@/lib/ai/content-processor";
 import type { AIProviderInterface } from "@/lib/ai/provider-interface";
-import type { AIMessage, AIRequestOptions, AIResponse } from "@/lib/ai/types";
+import type { AIResponse } from "@/lib/ai/types";
 
 const MOCK_AI_RESPONSE = JSON.stringify([
   {
@@ -29,10 +29,7 @@ class MockAIProvider implements AIProviderInterface {
   readonly providerType = "MOCK";
   readonly modelName = "mock-model";
 
-  async complete(
-    _messages: AIMessage[],
-    _options?: AIRequestOptions
-  ): Promise<AIResponse> {
+  async complete(): Promise<AIResponse> {
     return {
       content: MOCK_AI_RESPONSE,
       inputTokens: 500,
@@ -104,9 +101,7 @@ describe("processWebsiteBatch", () => {
   it("handles media file assignments", async () => {
     const result = await processWebsiteBatch({
       rawText: "İçerik metni",
-      mediaFiles: [
-        { fileId: "media_001", fileName: "kapak.jpg" }
-      ],
+      mediaFiles: [{ fileId: "media_001", fileName: "kapak.jpg" }],
       instructionText: "",
       accountId: "site_123",
       timezone: "Europe/Istanbul",
@@ -138,5 +133,84 @@ describe("processWebsiteBatch", () => {
         provider: badProvider
       })
     ).rejects.toThrow("geçerli bir JSON");
+  });
+});
+
+describe("processXBatch", () => {
+  it("keeps tweetText from AI output", async () => {
+    const provider: AIProviderInterface = {
+      providerType: "MOCK",
+      modelName: "mock-model",
+      complete: async () => ({
+        content: JSON.stringify([
+          {
+            platform: "x",
+            contentType: "x_post",
+            targetAccountId: "x_123",
+            tweetText: "X için gönderilecek gerçek metin",
+            media: [],
+            scheduledAt: "2026-06-16T07:00:00.000Z",
+            scheduleIsInferred: false,
+            confidence: 0.92,
+            warnings: []
+          }
+        ]),
+        inputTokens: 100,
+        outputTokens: 50,
+        model: "mock-model"
+      })
+    };
+
+    const result = await processXBatch({
+      rawText: "X için gönderilecek gerçek metin",
+      mediaFiles: [],
+      instructionText: "Yarın yayınla",
+      accountId: "x_123",
+      timezone: "Europe/Istanbul",
+      provider
+    });
+
+    expect(result.items[0].tweetText).toBe("X için gönderilecek gerçek metin");
+    expect(result.items[0].warnings).not.toContain("MISSING_CONTENT");
+  });
+
+  it("uses text/content aliases when the model does not return tweetText", async () => {
+    const provider: AIProviderInterface = {
+      providerType: "MOCK",
+      modelName: "mock-model",
+      complete: async () => ({
+        content: JSON.stringify([
+          {
+            platform: "x",
+            contentType: "x_post",
+            targetAccountId: "x_123",
+            text: "Model tweetText yerine text döndürdü",
+            media: [],
+            scheduledAt: null,
+            scheduleIsInferred: false,
+            confidence: 0.8,
+            warnings: []
+          }
+        ]),
+        inputTokens: 100,
+        outputTokens: 50,
+        model: "mock-model"
+      })
+    };
+
+    const result = await processXBatch({
+      rawText: "Model tweetText yerine text döndürdü",
+      mediaFiles: [],
+      instructionText: "",
+      accountId: "x_123",
+      timezone: "Europe/Istanbul",
+      provider
+    });
+
+    expect(result.items[0].tweetText).toBe(
+      "Model tweetText yerine text döndürdü"
+    );
+    expect(result.items[0].warnings).toContain("AMBIGUOUS_SCHEDULE");
+    expect(result.items[0].warnings).not.toContain("MISSING_CONTENT");
   });
 });

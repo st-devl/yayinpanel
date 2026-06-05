@@ -425,7 +425,8 @@ function warningLabel(value: string) {
   const labels: Record<string, string> = {
     AMBIGUOUS_SCHEDULE: "Yayın tarihi belirsiz",
     CONTENT_TOO_LONG: "İçerik karakter limitini aşıyor",
-    MEDIA_MATCH_UNCERTAIN: "Görsel eşleşmesi belirsiz"
+    MEDIA_MATCH_UNCERTAIN: "Görsel eşleşmesi belirsiz",
+    MISSING_CONTENT: "İçerik metni eksik"
   };
 
   return labels[value] ?? value;

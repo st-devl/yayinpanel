@@ -128,4 +128,33 @@ describe("review items", () => {
     expect(card.platform).toBe(Platform.INSTAGRAM);
     expect(card.text).toBe("Instagram açıklama metni");
   });
+
+  it("uses safe fallback text for X review items", async () => {
+    const batch = await createTestBatch(Platform.X);
+    const itemId = await createReviewItem(batch.id, {
+      aiNotes: "",
+      confidence: 0.75,
+      confidenceLevel: "MEDIUM",
+      contentType: "x_post",
+      media: [],
+      platform: "x",
+      scheduledAt: null,
+      scheduleIsInferred: false,
+      summary: "Özetten gelen X metni",
+      targetAccountId: batch.accountId,
+      warnings: []
+    } satisfies ProcessedContent);
+
+    const item = await prisma.processingItem.findUniqueOrThrow({
+      where: { id: itemId }
+    });
+    expect(JSON.parse(item.proposedPlatformData)).toMatchObject({
+      tweetText: "Özetten gelen X metni"
+    });
+
+    const card = await approveItem(itemId);
+    testCardIds.add(card.id);
+
+    expect(card.text).toBe("Özetten gelen X metni");
+  });
 });

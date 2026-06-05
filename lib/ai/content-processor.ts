@@ -42,7 +42,12 @@ export async function processWebsiteBatch(
     currentDateIso: new Date().toISOString()
   });
 
-  return runProcessing(params.provider, userPrompt, "website", params.accountId);
+  return runProcessing(
+    params.provider,
+    userPrompt,
+    "website",
+    params.accountId
+  );
 }
 
 export async function processInstagramBatch(
@@ -57,7 +62,12 @@ export async function processInstagramBatch(
     currentDateIso: new Date().toISOString()
   });
 
-  return runProcessing(params.provider, userPrompt, "instagram", params.accountId);
+  return runProcessing(
+    params.provider,
+    userPrompt,
+    "instagram",
+    params.accountId
+  );
 }
 
 export async function processXBatch(
@@ -92,17 +102,50 @@ async function runProcessing(
   const rawItems = parseAIResponse(response.content);
 
   const items: ProcessedContent[] = rawItems.map((raw) => {
-    const confidence = typeof raw.confidence === "number" ? raw.confidence : 0.5;
+    const confidence =
+      typeof raw.confidence === "number" ? raw.confidence : 0.5;
     const warnings: string[] = Array.isArray(raw.warnings) ? raw.warnings : [];
     const media: MediaAssignment[] = Array.isArray(raw.media) ? raw.media : [];
     const scheduledAt = parseScheduledAt(raw.scheduledAt as string | null);
+    const title = firstString(raw, ["title"]);
+    const summary = firstString(raw, ["summary", "excerpt"]);
+    const contentHtml = firstString(raw, ["contentHtml", "content", "body"]);
+    const caption = firstString(raw, [
+      "caption",
+      "text",
+      "content",
+      "description",
+      "body"
+    ]);
+    const tweetText = firstString(raw, [
+      "tweetText",
+      "text",
+      "content",
+      "body",
+      "postText",
+      "tweet",
+      "title"
+    ]);
 
     if (!scheduledAt && !warnings.includes("AMBIGUOUS_SCHEDULE")) {
       warnings.push("AMBIGUOUS_SCHEDULE");
     }
 
-    const str = (v: unknown): string | undefined =>
-      typeof v === "string" ? v : undefined;
+    if (
+      platform === "x" &&
+      !tweetText &&
+      !warnings.includes("MISSING_CONTENT")
+    ) {
+      warnings.push("MISSING_CONTENT");
+    }
+
+    if (
+      platform === "instagram" &&
+      !caption &&
+      !warnings.includes("MISSING_CONTENT")
+    ) {
+      warnings.push("MISSING_CONTENT");
+    }
 
     return {
       platform,
@@ -114,21 +157,19 @@ async function runProcessing(
             ? "instagram_post"
             : "x_post"),
       targetAccountId: accountId,
-      title: str(raw.title),
-      summary: str(raw.summary),
-      slug: str(raw.slug),
-      contentHtml: str(raw.contentHtml),
-      seoTitle: str(raw.seoTitle),
-      seoDescription: str(raw.seoDescription),
-      category: str(raw.category),
-      tags: Array.isArray(raw.tags)
-        ? (raw.tags as unknown[]).map(String)
-        : [],
-      caption: str(raw.caption),
+      title,
+      summary,
+      slug: firstString(raw, ["slug"]),
+      contentHtml,
+      seoTitle: firstString(raw, ["seoTitle"]),
+      seoDescription: firstString(raw, ["seoDescription"]),
+      category: firstString(raw, ["category"]),
+      tags: Array.isArray(raw.tags) ? (raw.tags as unknown[]).map(String) : [],
+      caption,
       hashtags: Array.isArray(raw.hashtags)
         ? (raw.hashtags as unknown[]).map(String)
         : [],
-      tweetText: str(raw.tweetText),
+      tweetText,
       threadItems: Array.isArray(raw.threadItems)
         ? (raw.threadItems as unknown[]).map(String)
         : [],
@@ -138,7 +179,7 @@ async function runProcessing(
       confidence,
       confidenceLevel: classifyConfidence(confidence),
       warnings,
-      aiNotes: str(raw.aiNotes)
+      aiNotes: firstString(raw, ["aiNotes"])
     };
   });
 
@@ -148,6 +189,21 @@ async function runProcessing(
     outputTokens: response.outputTokens,
     model: response.model
   };
+}
+
+function firstString(
+  raw: Record<string, unknown>,
+  keys: string[]
+): string | undefined {
+  for (const key of keys) {
+    const value = raw[key];
+
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return undefined;
 }
 
 function parseAIResponse(content: string): Record<string, unknown>[] {
@@ -164,8 +220,10 @@ function parseAIResponse(content: string): Record<string, unknown>[] {
     if (typeof parsed === "object" && parsed !== null) {
       const obj = parsed as Record<string, unknown>;
 
-      if (Array.isArray(obj.items)) return obj.items as Record<string, unknown>[];
-      if (Array.isArray(obj.result)) return obj.result as Record<string, unknown>[];
+      if (Array.isArray(obj.items))
+        return obj.items as Record<string, unknown>[];
+      if (Array.isArray(obj.result))
+        return obj.result as Record<string, unknown>[];
 
       // Anthropic tool use: result string olarak gelir
       if (typeof obj.result === "string") {

@@ -192,7 +192,7 @@ function buildProposedPlatformData(
 
   if (item.platform === "instagram") {
     return {
-      caption: item.caption ?? "",
+      caption: item.caption ?? item.summary ?? item.title ?? "",
       postType:
         item.contentType === "instagram_carousel" ? "CAROUSEL" : "IMAGE",
       hashtags: item.hashtags ?? [],
@@ -201,7 +201,7 @@ function buildProposedPlatformData(
   }
 
   return {
-    tweetText: item.tweetText ?? "",
+    tweetText: item.tweetText ?? item.title ?? item.summary ?? "",
     threadItems: item.threadItems ?? [],
     linkUrl: "",
     hasMedia: item.media.length > 0,
