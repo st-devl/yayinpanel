@@ -23,7 +23,9 @@ SSH_OPTS=(
   -o ServerAliveCountMax=4
 )
 
-if [[ "${DEPLOY_SSH_BATCH_MODE:-yes}" == "yes" ]]; then
+DEPLOY_SSH_BATCH_MODE="${DEPLOY_SSH_BATCH_MODE:-auto}"
+if [[ "$DEPLOY_SSH_BATCH_MODE" == "yes" ]] ||
+  [[ "$DEPLOY_SSH_BATCH_MODE" == "auto" && ! -t 0 ]]; then
   SSH_OPTS+=(-o BatchMode=yes)
 fi
 
