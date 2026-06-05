@@ -23,6 +23,16 @@ export type SafeAIProvider = Prisma.AIProviderGetPayload<{
   select: typeof aiProviderSafeSelect;
 }>;
 
+/**
+ * API anahtarlarını HTTP header'ı olarak güvenle kullanılabilir hâle getirir.
+ * Terminal prompt'undan ("❯ ") veya zengin metinden kopyalanırken araya giren
+ * ASCII dışı / kontrol karakterlerini ve tüm boşlukları temizler. Aksi hâlde
+ * fetch "Cannot convert argument to a ByteString" hatası verir.
+ */
+function sanitizeApiKey(raw: string): string {
+  return raw.replace(/[^\x21-\x7E]/g, "");
+}
+
 export type CreateAIProviderInput = {
   name: string;
   providerType: AIProviderType;
@@ -39,7 +49,7 @@ export type CreateAIProviderInput = {
 export async function createAIProvider(
   input: CreateAIProviderInput
 ): Promise<SafeAIProvider> {
-  const apiKey = input.apiKey.trim();
+  const apiKey = sanitizeApiKey(input.apiKey);
 
   if (!apiKey) {
     throw new Error("API anahtarı zorunludur");
@@ -85,7 +95,7 @@ export async function updateAIProvider(
       name: input.name?.trim(),
       providerType: input.providerType,
       apiKeyEncrypted: input.apiKey
-        ? encryptSecret(input.apiKey.trim())
+        ? encryptSecret(sanitizeApiKey(input.apiKey))
         : undefined,
       model: input.model?.trim(),
       baseUrl:

@@ -8,7 +8,7 @@ export class GroqProvider extends OpenAIProvider {
   }) {
     super({
       ...config,
-      baseUrl: "https://api.groq.com/openai/v1"
+      baseUrl: "https://api.groq.com/openai"
     });
     (this as { providerType: string }).providerType = "GROQ";
   }
