@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiUser } from "@/lib/server/api-auth";
 import { bulkScheduleContentCards } from "@/lib/server/content-cards";
+import { runSchedulerTick } from "@/lib/server/scheduler-core";
 import { zonedDateTimeInputToUtc } from "@/lib/timezone";
+
+// Vakti gelmis kartlar (or. "simdi" planlanan ilk kart) senkron yayinlandigi
+// icin istek biraz uzun surebilir.
+export const maxDuration = 120;
 
 const bulkSchema = z.object({
   /** Islenecek kart kimlikleri, gosterim sirasinda (araliklar bu siraya gore atanir). */
@@ -66,7 +71,21 @@ export async function POST(request: NextRequest) {
 
   try {
     const { updated } = await bulkScheduleContentCards(entries);
-    return NextResponse.json({ data: { updated, total: cardIds.length } });
+
+    // Vakti gelmis kartlari (scheduledAt <= simdi) 60sn'lik poll'u beklemeden
+    // hemen yayinla. "now" modunda hepsi, "interval" modunda ilk kart yayinlanir.
+    // Atomik claim sayesinde scheduler process'i ile cakismaz.
+    let published = 0;
+    try {
+      const tick = await runSchedulerTick();
+      published = tick.published;
+    } catch {
+      // Anlik yayin basarisiz olsa bile kartlar planli kaldi; poll devralir.
+    }
+
+    return NextResponse.json({
+      data: { updated, total: cardIds.length, published }
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Toplu islem basarisiz";

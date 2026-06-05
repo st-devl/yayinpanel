@@ -383,7 +383,7 @@ export default function ContentPage() {
         method: "POST"
       });
       const payload = (await response.json()) as {
-        data?: { updated: number; total: number };
+        data?: { updated: number; total: number; published: number };
         error?: string;
       };
 
@@ -391,12 +391,14 @@ export default function ContentPage() {
         throw new Error(payload.error ?? "Toplu işlem başarısız.");
       }
 
+      const { updated, published } = payload.data;
+      const scheduledRest = Math.max(updated - published, 0);
       setRequestState({
         tone: "success",
         message:
           mode === "now"
-            ? `${payload.data.updated} içerik yayına alındı.`
-            : `${payload.data.updated} içerik ${intervalMinutes} dakika aralıklarla planlandı.`
+            ? `${published}/${updated} içerik yayınlandı.`
+            : `İlk ${published} içerik yayınlandı, kalan ${scheduledRest} içerik ${intervalMinutes} dakika aralıklarla planlandı.`
       });
       await refreshCards();
     } catch (error) {
