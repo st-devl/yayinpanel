@@ -223,6 +223,64 @@ export async function createXAccount(
   });
 }
 
+/**
+ * OAuth2 (PKCE) akisindan donen kullanici token'lariyla X hesabini olusturur ya
+ * da gunceller. Ayni xUserId varsa token'lar yenilenir; yoksa yeni hesap acilir.
+ */
+export async function upsertXAccountFromOAuth(input: {
+  xUserId: string;
+  username: string;
+  accountName?: string;
+  accessToken: string;
+  refreshToken?: string | null;
+  tokenExpiresAt?: Date | null;
+  profileImageUrl?: string | null;
+}): Promise<SafeXAccount> {
+  const accessTokenEncrypted = encryptSecret(
+    normalizeSecret(input.accessToken, "X access token")
+  );
+  const refreshTokenEncrypted = input.refreshToken
+    ? encryptSecret(normalizeSecret(input.refreshToken, "X refresh token"))
+    : null;
+  const username = input.username.trim().replace(/^@+/, "");
+
+  const existing = await prisma.xAccount.findFirst({
+    where: { xUserId: input.xUserId },
+    select: { id: true }
+  });
+
+  if (existing) {
+    return prisma.xAccount.update({
+      where: { id: existing.id },
+      data: {
+        username,
+        accessTokenEncrypted,
+        refreshTokenEncrypted,
+        tokenExpiresAt: input.tokenExpiresAt,
+        profileImageUrl: input.profileImageUrl ?? undefined,
+        connectionStatus: ConnectionStatus.CONNECTED,
+        lastError: null
+      },
+      select: xAccountSafeSelect
+    });
+  }
+
+  return prisma.xAccount.create({
+    data: {
+      accountName: input.accountName?.trim() || username,
+      username,
+      xUserId: input.xUserId,
+      profileImageUrl: input.profileImageUrl ?? null,
+      accessTokenEncrypted,
+      refreshTokenEncrypted,
+      tokenExpiresAt: input.tokenExpiresAt,
+      connectionStatus: ConnectionStatus.CONNECTED,
+      lastError: null
+    },
+    select: xAccountSafeSelect
+  });
+}
+
 export async function updateXTokens(
   accountId: string,
   input: {

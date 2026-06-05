@@ -6,12 +6,93 @@ import { fetchWithTimeout, readJsonResponse } from "@/lib/publishers/http";
 
 const X_TOKEN_URL = "https://api.twitter.com/2/oauth2/token";
 const X_ME_URL = "https://api.twitter.com/2/users/me";
+const X_AUTHORIZE_URL = "https://twitter.com/i/oauth2/authorize";
+
+/**
+ * Tweet atmak icin user-context gerekir. offline.access refresh token saglar;
+ * boylece access token suresi dolunca otomatik yenilenebilir.
+ */
+export const X_OAUTH_SCOPES = [
+  "tweet.read",
+  "tweet.write",
+  "users.read",
+  "offline.access"
+].join(" ");
 
 export type XTokenResponse = {
   accessToken: string;
   refreshToken: string | null;
   expiresAt: Date | null;
 };
+
+/** OAuth2 callback URL'i (X Developer Portal'a bu URL eklenmeli). */
+export function getXRedirectUri(): string {
+  const env = getEnv();
+  return `${env.APP_BASE_URL.replace(/\/$/, "")}/api/accounts/x/oauth/callback`;
+}
+
+/** Kullanicinin yetki verecegi X OAuth2 (PKCE) authorize URL'ini olusturur. */
+export function buildXAuthorizeUrl(input: {
+  state: string;
+  codeChallenge: string;
+}): string {
+  const env = getEnv();
+
+  if (!env.X_CLIENT_ID) {
+    throw permanentError(
+      "X_OAUTH_NOT_CONFIGURED",
+      "X_CLIENT_ID tanimli olmali"
+    );
+  }
+
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: env.X_CLIENT_ID,
+    redirect_uri: getXRedirectUri(),
+    scope: X_OAUTH_SCOPES,
+    state: input.state,
+    code_challenge: input.codeChallenge,
+    code_challenge_method: "S256"
+  });
+
+  return `${X_AUTHORIZE_URL}?${params.toString()}`;
+}
+
+/** authorization_code grant: callback'te gelen code'u user token'a cevirir. */
+export async function exchangeXAuthCode(input: {
+  code: string;
+  codeVerifier: string;
+}): Promise<XTokenResponse> {
+  const env = getEnv();
+  const params = new URLSearchParams({
+    grant_type: "authorization_code",
+    code: input.code,
+    redirect_uri: getXRedirectUri(),
+    code_verifier: input.codeVerifier,
+    client_id: env.X_CLIENT_ID
+  });
+
+  const response = await fetchWithTimeout(X_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      Authorization: basicClientAuth(),
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: params.toString()
+  });
+  const result = await readJsonResponse(response);
+
+  if (!result.ok) {
+    throw classifyHttpStatus(
+      result.status,
+      "X_CODE_EXCHANGE_FAILED",
+      "X yetkilendirme kodu degisimi basarisiz",
+      result.json
+    );
+  }
+
+  return parseTokenResponse(result.json);
+}
 
 function basicClientAuth() {
   const env = getEnv();

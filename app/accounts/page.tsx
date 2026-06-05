@@ -278,6 +278,61 @@ export default function AccountsPage() {
     });
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get("xoauth");
+    if (!result) return;
+
+    const account = params.get("account");
+    const messages: Record<string, RequestState> = {
+      success: {
+        tone: "success",
+        message: account
+          ? `X hesabı @${account} başarıyla bağlandı.`
+          : "X hesabı başarıyla bağlandı."
+      },
+      denied: { tone: "error", message: "X yetkilendirmesi iptal edildi." },
+      config_error: {
+        tone: "error",
+        message:
+          "X OAuth yapılandırılmamış. X_CLIENT_ID ve X_CLIENT_SECRET tanımlayın."
+      },
+      state_mismatch: {
+        tone: "error",
+        message: "Güvenlik doğrulaması başarısız (state). Tekrar deneyin."
+      },
+      invalid: {
+        tone: "error",
+        message: "X yetkilendirme yanıtı geçersiz. Tekrar deneyin."
+      },
+      verify_failed: {
+        tone: "error",
+        message: "X kullanıcı bilgisi doğrulanamadı. İzinleri kontrol edin."
+      },
+      exchange_failed: {
+        tone: "error",
+        message:
+          "X token değişimi başarısız. Callback URL ve istemci ayarlarını kontrol edin."
+      }
+    };
+
+    // OAuth donusu yalnizca mount'ta URL'den okunur; banner gostermek icin
+    // tek seferlik state guncellemesi beklenen davranis.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRequestState(
+      messages[result] ?? {
+        tone: "error",
+        message: "X bağlantısı tamamlanamadı."
+      }
+    );
+
+    if (result === "success") {
+      loadAccounts().catch(() => undefined);
+    }
+
+    window.history.replaceState(null, "", "/accounts");
+  }, []);
+
   async function loadAccounts() {
     setLoading(true);
 
@@ -693,12 +748,40 @@ export default function AccountsPage() {
             ) : null}
 
             {createForm.platform === "X" ? (
-              <div className="grid grid-cols-1 gap-md md:grid-cols-2 xl:grid-cols-4">
-                <TextInput
-                  label="X User ID"
-                  value={createForm.xUserId}
-                  onChange={(value) => updateCreateField("xUserId", value)}
-                />
+              <div className="space-y-md">
+                <div className="flex flex-col gap-sm rounded-lg border border-blue-200 bg-blue-50 p-md text-blue-900 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="font-label-md text-label-md">
+                      Önerilen: X ile Bağlan
+                    </p>
+                    <p className="font-body-sm text-body-sm">
+                      X&apos;te yetki verin; gönderi atmak için gereken
+                      kullanıcı token&apos;ı otomatik alınır. (Tweet atmak
+                      app-only token ile çalışmaz.)
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="primary-button shrink-0 px-md py-sm font-label-md text-label-md"
+                    onClick={() => {
+                      window.location.href = "/api/accounts/x/oauth/start";
+                    }}
+                  >
+                    <MaterialIcon name="link" />
+                    X ile Bağlan
+                  </button>
+                </div>
+
+                <p className="font-label-sm text-label-sm text-on-surface-variant">
+                  Veya OAuth2 kullanıcı token&apos;ınızı elle girin:
+                </p>
+
+                <div className="grid grid-cols-1 gap-md md:grid-cols-2 xl:grid-cols-4">
+                  <TextInput
+                    label="X User ID"
+                    value={createForm.xUserId}
+                    onChange={(value) => updateCreateField("xUserId", value)}
+                  />
                 <TextInput
                   label="OAuth2 Access Token"
                   type="password"
@@ -719,6 +802,7 @@ export default function AccountsPage() {
                     updateCreateField("tokenExpiresAt", value)
                   }
                 />
+                </div>
               </div>
             ) : null}
 
