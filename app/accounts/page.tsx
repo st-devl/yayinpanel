@@ -706,13 +706,13 @@ export default function AccountsPage() {
                   onChange={(value) => updateCreateField("accessToken", value)}
                 />
                 <TextInput
-                  label="Refresh Token"
+                  label="Refresh Token (opsiyonel)"
                   type="password"
                   value={createForm.refreshToken}
                   onChange={(value) => updateCreateField("refreshToken", value)}
                 />
                 <TextInput
-                  label="Token Bitiş Tarihi"
+                  label="Token Bitiş Tarihi (opsiyonel)"
                   type="datetime-local"
                   value={createForm.tokenExpiresAt}
                   onChange={(value) =>
@@ -982,7 +982,7 @@ export default function AccountsPage() {
                   />
                   {reconnectTarget.platform === "X" ? (
                     <TextInput
-                      label="Yeni Refresh Token"
+                      label="Yeni Refresh Token (opsiyonel)"
                       type="password"
                       value={reconnectForm.refreshToken}
                       onChange={(value) =>
@@ -991,7 +991,7 @@ export default function AccountsPage() {
                     />
                   ) : null}
                   <TextInput
-                    label="Token Bitiş Tarihi"
+                    label="Token Bitiş Tarihi (opsiyonel)"
                     type="datetime-local"
                     value={reconnectForm.tokenExpiresAt}
                     onChange={(value) =>
