@@ -137,3 +137,6 @@ Scriptler 14 gunden eski kendi yedeklerini temizler. `.env` ve
 - Scheduler sorgulari status ve tarih indexleri uzerinden calisir.
 - Medya binaryleri API uzerinden kisitli cache headerlariyla servis edilir.
 - Yakin donem buyumede SQLite yerine PostgreSQL'e gecis degerlendirilmelidir.
+
+
+npm run deploy
