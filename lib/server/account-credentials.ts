@@ -119,6 +119,22 @@ function normalizeSecret(value: string, label: string) {
   return normalized;
 }
 
+/**
+ * Sosyal medya kullanıcı adını saklamaya hazırlar: baştaki "@" işaret(ler)ini
+ * ve boşlukları temizler. Uygulama gösterimde "@" ekini kendisi eklediği için
+ * burada "@" saklanırsa "@@kullanici" gibi çift işaret oluşur. Bu, tüm yazma
+ * yollarını koruyan yetkili tek noktadır.
+ */
+function normalizeHandle(value: string) {
+  const normalized = value.trim().replace(/^@+/, "");
+
+  if (!normalized) {
+    throw new Error("username is required");
+  }
+
+  return normalized;
+}
+
 function rejectEncryptedInput(input: Record<string, unknown>) {
   const encryptedKeys = Object.keys(input).filter((key) =>
     key.endsWith("Encrypted")
@@ -139,7 +155,7 @@ export async function createInstagramAccount(
   return prisma.instagramAccount.create({
     data: {
       accountName: input.accountName,
-      username: input.username,
+      username: normalizeHandle(input.username),
       instagramBusinessAccountId: input.instagramBusinessAccountId,
       facebookPageId: input.facebookPageId,
       profileImageUrl: input.profileImageUrl,
@@ -190,7 +206,7 @@ export async function createXAccount(
   return prisma.xAccount.create({
     data: {
       accountName: input.accountName,
-      username: input.username,
+      username: normalizeHandle(input.username),
       xUserId: input.xUserId,
       profileImageUrl: input.profileImageUrl,
       accessTokenEncrypted: encryptSecret(

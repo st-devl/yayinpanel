@@ -9,7 +9,10 @@ import { prisma } from "@/lib/server/prisma";
 
 const createSchema = z.object({
   accountName: z.string().min(1),
-  username: z.string().min(1),
+  username: z
+    .string()
+    .transform((value) => value.trim().replace(/^@+/, ""))
+    .pipe(z.string().min(1)),
   instagramBusinessAccountId: z.string().min(1),
   facebookPageId: z.string().min(1),
   accessToken: z.string().min(1),
