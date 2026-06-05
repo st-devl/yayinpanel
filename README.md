@@ -64,13 +64,8 @@ yayinlanabilecek yakin tarihli sahte kart uretilmez.
 | `npm run test:ui`        | Playwright desktop/mobile UI smoke testleri  |
 | `npm run compare:design` | Design screenshot audit raporu               |
 
-Tasarim karsilastirma komutu calisan bir web sunucusu bekler. Farkli port icin:
-
-```bash
-DESIGN_COMPARE_BASE_URL=http://localhost:3001 npm run compare:design
-```
-
-Raporlar `test-results/design-comparison` altina yazilir.
+Tasarim karsilastirma komutu calisan bir web sunucusu bekler. Raporlar
+`test-results/design-comparison` altina yazilir.
 
 ## Mimari
 
@@ -90,12 +85,6 @@ Raporlar `test-results/design-comparison` altina yazilir.
 docker compose up --build
 ```
 
-Port degistirmek icin:
-
-```bash
-APP_PORT=3001 APP_BASE_URL=http://localhost:3001 docker compose up --build
-```
-
 Container acilisinda migration ve seed uygulanir. Kalici volume'lar:
 
 - `patlat-data`: SQLite veritabani
@@ -106,6 +95,12 @@ Container acilisinda migration ve seed uygulanir. Kalici volume'lar:
 PM2, Nginx/HTTPS, Docker, scheduler ve cron backup notlari
 [DEPLOYMENT.md](./DEPLOYMENT.md) icindedir. Production icin `APP_BASE_URL`
 mutlaka disaridan erisilen HTTPS adresi olmalidir.
+
+Canli sunucuya deploy:
+
+```bash
+npm run deploy
+```
 
 ## Backup
 
@@ -137,6 +132,3 @@ Scriptler 14 gunden eski kendi yedeklerini temizler. `.env` ve
 - Scheduler sorgulari status ve tarih indexleri uzerinden calisir.
 - Medya binaryleri API uzerinden kisitli cache headerlariyla servis edilir.
 - Yakin donem buyumede SQLite yerine PostgreSQL'e gecis degerlendirilmelidir.
-
-
-npm run deploy

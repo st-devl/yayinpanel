@@ -60,9 +60,22 @@ docker compose logs -f   # logları izle
 
 ### 2.4. Güncelleme
 
+Bu repo için tek komutlu production deploy:
+
+```bash
+npm run deploy
+```
+
+Bu komut değişiklikleri commit edip GitHub'a push eder, ardından
+`root@yayinpanel.cloud` üzerindeki `/opt/patlat` dizininde aşağıdaki güncelleme
+akışını çalıştırır. Farklı SSH kullanıcısı veya anahtarı gerekirse
+`DEPLOY_HOST` ve `DEPLOY_KEY` ortam değişkenleriyle verilebilir.
+
+Sunucuda elle çalıştırılacak karşılığı:
+
 ```bash
 cd /opt/patlat
-git pull
+git pull --ff-only
 docker compose up -d --build
 ```
 
