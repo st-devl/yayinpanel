@@ -8,11 +8,13 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/server/prisma";
 
+// FAILED kalici (terminal) bir durumdur; tamamlanamaz, bu yuzden hesabin
+// silinmesini engellememeli. Aksi halde basarisiz yayini olan bir hesabi
+// kullanici hicbir zaman kaldiramaz.
 const activeContentStatuses: ContentStatus[] = [
   ContentStatus.DRAFT,
   ContentStatus.SCHEDULED,
   ContentStatus.PUBLISHING,
-  ContentStatus.FAILED,
   ContentStatus.MANUAL_CHECK_REQUIRED
 ];
 

@@ -143,6 +143,17 @@ describe("account deletion guard", () => {
         text: "Published post"
       }
     });
+    // FAILED terminaldir; hesabin silinmesini engellememeli.
+    await prisma.contentCard.create({
+      data: {
+        accountId,
+        accountType: "X",
+        platform: Platform.X,
+        platformData: JSON.stringify({ hasMedia: false }),
+        status: ContentStatus.FAILED,
+        text: "Failed post"
+      }
+    });
     await prisma.processingBatch.create({
       data: {
         accountId,
