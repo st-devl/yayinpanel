@@ -38,8 +38,7 @@ async function loop() {
 
 function delay(ms: number) {
   return new Promise<void>((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    timer.unref?.();
+    setTimeout(resolve, ms);
   });
 }
 
