@@ -25,6 +25,7 @@ export class OpenAIProvider implements AIProviderInterface {
     messages: AIMessage[],
     options?: AIRequestOptions
   ): Promise<AIResponse> {
+    const requestMessages = ensureJsonModeInstruction(messages);
     const controller = new AbortController();
     const timer = setTimeout(
       () => controller.abort(),
@@ -40,7 +41,7 @@ export class OpenAIProvider implements AIProviderInterface {
         },
         body: JSON.stringify({
           model: this.modelName,
-          messages,
+          messages: requestMessages,
           max_tokens: options?.maxTokens ?? 4096,
           temperature: options?.temperature ?? 0.2,
           response_format: { type: "json_object" }
@@ -73,4 +74,18 @@ export class OpenAIProvider implements AIProviderInterface {
       clearTimeout(timer);
     }
   }
+}
+
+function ensureJsonModeInstruction(messages: AIMessage[]): AIMessage[] {
+  if (messages.some((message) => /\bjson\b/i.test(message.content))) {
+    return messages;
+  }
+
+  return [
+    {
+      role: "system",
+      content: "Return only a valid JSON object or JSON array. Do not include any other text."
+    },
+    ...messages
+  ];
 }
