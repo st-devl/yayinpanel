@@ -11,8 +11,12 @@ import {
 import { parseFileToText } from "@/lib/ai/file-parser";
 import { getEnv } from "@/lib/server/env";
 import { logUsage } from "@/lib/server/ai-usage";
-import { createBatch, updateBatchStatus } from "@/lib/server/processing-batches";
+import {
+  createBatch,
+  updateBatchStatus
+} from "@/lib/server/processing-batches";
 import { createReviewItem } from "@/lib/server/review-items";
+import { resolveStableXAccountId } from "@/lib/server/account-credentials";
 import { getDefaultAIProvider } from "@/lib/server/ai-providers";
 import { prisma } from "@/lib/server/prisma";
 
@@ -55,7 +59,21 @@ export async function POST(request: NextRequest) {
 
   if (!rawText && documentFileIds.length === 0) {
     return NextResponse.json(
-      { error: "İşlenecek içerik bulunamadı. Dosya yükleyin veya metin girin." },
+      {
+        error: "İşlenecek içerik bulunamadı. Dosya yükleyin veya metin girin."
+      },
+      { status: 400 }
+    );
+  }
+
+  const stableAccountId =
+    platform === Platform.X
+      ? await resolveStableXAccountId(accountId)
+      : accountId;
+
+  if (!stableAccountId) {
+    return NextResponse.json(
+      { error: "Seçili X hesabı bulunamadı veya yeniden bağlanmalı." },
       { status: 400 }
     );
   }
@@ -75,7 +93,7 @@ export async function POST(request: NextRequest) {
 
   const batch = await createBatch({
     platform,
-    accountId,
+    accountId: stableAccountId,
     aiProviderId: resolvedProviderId,
     instructionText: instructionText ?? null,
     uploadedFileIds: [...mediaFileIds, ...documentFileIds]
@@ -142,7 +160,7 @@ export async function POST(request: NextRequest) {
       rawText: combinedText,
       mediaFiles: mediaFileInfos,
       instructionText: instructionText ?? "",
-      accountId,
+      accountId: stableAccountId,
       timezone: env.TIMEZONE ?? "Europe/Istanbul",
       provider
     });
@@ -169,8 +187,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: { batchId: updatedBatch.id } });
   } catch (error) {
     await updateBatchStatus(batch.id, "FAILED", {
-      errorMessage:
-        error instanceof Error ? error.message : "Bilinmeyen hata"
+      errorMessage: error instanceof Error ? error.message : "Bilinmeyen hata"
     });
 
     return NextResponse.json(

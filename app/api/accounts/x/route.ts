@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiUser } from "@/lib/server/api-auth";
 import {
-  createXAccount,
+  upsertXAccountFromOAuth,
   xAccountSafeSelect
 } from "@/lib/server/account-credentials";
 import { prisma } from "@/lib/server/prisma";
@@ -45,6 +45,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const account = await createXAccount(parsed.data);
+  const account = await upsertXAccountFromOAuth(parsed.data);
   return NextResponse.json({ data: account }, { status: 201 });
 }

@@ -147,6 +147,55 @@ function rejectEncryptedInput(input: Record<string, unknown>) {
   }
 }
 
+async function findXAccountByReference(
+  accountReference: string,
+  options: { allowSingleAccountFallback?: boolean } = {}
+) {
+  const account = await prisma.xAccount.findFirst({
+    where: {
+      OR: [{ id: accountReference }, { xUserId: accountReference }]
+    },
+    select: {
+      id: true,
+      xUserId: true,
+      accessTokenEncrypted: true,
+      refreshTokenEncrypted: true
+    }
+  });
+
+  if (account || !options.allowSingleAccountFallback) {
+    return account;
+  }
+
+  const fallbackAccounts = await prisma.xAccount.findMany({
+    where: { connectionStatus: { not: ConnectionStatus.DISCONNECTED } },
+    orderBy: { updatedAt: "desc" },
+    take: 2,
+    select: {
+      id: true,
+      xUserId: true,
+      accessTokenEncrypted: true,
+      refreshTokenEncrypted: true
+    }
+  });
+
+  return fallbackAccounts.length === 1 ? fallbackAccounts[0] : null;
+}
+
+async function resolveXAccountInternalId(accountReference: string) {
+  const account = await findXAccountByReference(accountReference);
+  return account?.id ?? null;
+}
+
+/**
+ * X kartları yerel XAccount satır id'si yerine X'in kalıcı user id'sine
+ * bağlanır. Eski iç id gönderilirse burada xUserId'ye normalize edilir.
+ */
+export async function resolveStableXAccountId(accountReference: string) {
+  const account = await findXAccountByReference(accountReference);
+  return account?.xUserId ?? null;
+}
+
 export async function createInstagramAccount(
   input: CreateInstagramAccountInput
 ): Promise<SafeInstagramAccount> {
@@ -253,6 +302,7 @@ export async function upsertXAccountFromOAuth(input: {
     return prisma.xAccount.update({
       where: { id: existing.id },
       data: {
+        accountName: input.accountName?.trim() || undefined,
         username,
         accessTokenEncrypted,
         refreshTokenEncrypted,
@@ -282,13 +332,19 @@ export async function upsertXAccountFromOAuth(input: {
 }
 
 export async function updateXTokens(
-  accountId: string,
+  accountReference: string,
   input: {
     accessToken: string;
     refreshToken?: string | null;
     tokenExpiresAt?: Date | null;
   }
 ): Promise<SafeXAccount> {
+  const accountId = await resolveXAccountInternalId(accountReference);
+
+  if (!accountId) {
+    throw new Error("X account not found");
+  }
+
   return prisma.xAccount.update({
     where: { id: accountId },
     data: {
@@ -311,24 +367,23 @@ export async function updateXTokens(
   });
 }
 
-export async function getXTokens(accountId: string) {
-  const account = await prisma.xAccount.findUnique({
-    where: { id: accountId },
-    select: {
-      accessTokenEncrypted: true,
-      refreshTokenEncrypted: true
-    }
-  });
+export async function getXTokens(
+  accountReference: string,
+  options: { allowSingleAccountFallback?: boolean } = {}
+) {
+  const account = await findXAccountByReference(accountReference, options);
 
   if (!account) {
     return null;
   }
 
   return {
+    accountId: account.id,
     accessToken: decryptSecret(account.accessTokenEncrypted),
     refreshToken: account.refreshTokenEncrypted
       ? decryptSecret(account.refreshTokenEncrypted)
-      : null
+      : null,
+    xUserId: account.xUserId
   };
 }
 
@@ -411,10 +466,16 @@ export async function setInstagramConnectionStatus(
 }
 
 export async function setXConnectionStatus(
-  accountId: string,
+  accountReference: string,
   connectionStatus: ConnectionStatus,
   lastError: string | null = null
 ): Promise<SafeXAccount> {
+  const accountId = await resolveXAccountInternalId(accountReference);
+
+  if (!accountId) {
+    throw new Error("X account not found");
+  }
+
   return prisma.xAccount.update({
     where: { id: accountId },
     data: { connectionStatus, lastError },

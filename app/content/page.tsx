@@ -41,6 +41,7 @@ type AccountOption = {
   id: string;
   label: string;
   platform: Platform;
+  aliases?: string[];
 };
 
 type RequestState = {
@@ -148,13 +149,13 @@ export default function ContentPage() {
   const [bulkIntervalMinutes, setBulkIntervalMinutes] = useState("30");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
-  const accountLabelById = useMemo(
-    () =>
-      Object.fromEntries(
-        accounts.map((account) => [account.id, account.label])
-      ) as Record<string, string>,
-    [accounts]
-  );
+  const accountLabelById = useMemo(() => {
+    const entries = accounts.flatMap((account) => [
+      [account.id, account.label] as const,
+      ...(account.aliases ?? []).map((alias) => [alias, account.label] as const)
+    ]);
+    return Object.fromEntries(entries) as Record<string, string>;
+  }, [accounts]);
   const filteredAccountOptions = accounts.filter(
     (account) => !platform || account.platform === platform
   );
@@ -175,13 +176,18 @@ export default function ContentPage() {
           label: `Instagram @${account.username}`,
           platform: "INSTAGRAM" as const
         })),
-        ...((x.data ?? []) as Array<{ id: string; username: string }>).map(
-          (account) => ({
-            id: account.id,
-            label: `X @${account.username}`,
-            platform: "X" as const
-          })
-        ),
+        ...(
+          (x.data ?? []) as Array<{
+            id: string;
+            username: string;
+            xUserId: string;
+          }>
+        ).map((account) => ({
+          aliases: [account.id],
+          id: account.xUserId,
+          label: `X @${account.username}`,
+          platform: "X" as const
+        })),
         ...((wordpress.data ?? []) as Array<{ id: string; name: string }>).map(
           (site) => ({
             id: site.id,
@@ -404,7 +410,8 @@ export default function ContentPage() {
     } catch (error) {
       setRequestState({
         tone: "error",
-        message: error instanceof Error ? error.message : "Toplu işlem başarısız."
+        message:
+          error instanceof Error ? error.message : "Toplu işlem başarısız."
       });
     } finally {
       setBulkSubmitting(false);
@@ -728,7 +735,7 @@ export default function ContentPage() {
         </section>
 
         {!loading && eligibleCards.length > 0 ? (
-          <section className="sticky bottom-0 z-40 -mx-md panel-card flex flex-col gap-md border-t border-outline-variant bg-surface/95 p-md shadow-panel backdrop-blur md:flex-row md:items-end md:justify-between">
+          <section className="panel-card sticky bottom-0 z-40 -mx-md flex flex-col gap-md border-t border-outline-variant bg-surface/95 p-md shadow-panel backdrop-blur md:flex-row md:items-end md:justify-between">
             <div className="flex items-center gap-sm">
               <MaterialIcon name="rocket_launch" className="text-primary" />
               <div>

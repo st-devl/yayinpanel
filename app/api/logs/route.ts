@@ -55,8 +55,13 @@ async function getAccountLabels(
       select: { accountName: true, id: true, username: true }
     }),
     prisma.xAccount.findMany({
-      where: { id: { in: [...idsByPlatform[Platform.X]] } },
-      select: { accountName: true, id: true, username: true }
+      where: {
+        OR: [
+          { id: { in: [...idsByPlatform[Platform.X]] } },
+          { xUserId: { in: [...idsByPlatform[Platform.X]] } }
+        ]
+      },
+      select: { accountName: true, id: true, username: true, xUserId: true }
     }),
     prisma.wordPressSite.findMany({
       where: { id: { in: [...idsByPlatform[Platform.WORDPRESS]] } },
@@ -73,6 +78,13 @@ async function getAccountLabels(
       (account) =>
         [
           `${Platform.INSTAGRAM}:${account.id}`,
+          `${account.accountName} (@${account.username})`
+        ] as const
+    ),
+    ...x.map(
+      (account) =>
+        [
+          `${Platform.X}:${account.xUserId}`,
           `${account.accountName} (@${account.username})`
         ] as const
     ),

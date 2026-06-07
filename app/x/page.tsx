@@ -7,7 +7,10 @@ import { AppShell } from "@/components/app-shell";
 import { MaterialIcon } from "@/components/material-icon";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { analyzeXText } from "@/lib/domain/x-text";
-import { BulkUploadZone, type UploadedFile } from "@/components/ai/bulk-upload-zone";
+import {
+  BulkUploadZone,
+  type UploadedFile
+} from "@/components/ai/bulk-upload-zone";
 import { InstructionInput } from "@/components/ai/instruction-input";
 import { ProcessingIndicator } from "@/components/ai/processing-indicator";
 
@@ -15,6 +18,7 @@ type XAccount = {
   id: string;
   accountName: string;
   username: string;
+  xUserId: string;
   connectionStatus: string;
   lastError: string | null;
   profileImageUrl: string | null;
@@ -108,8 +112,8 @@ export default function XPage() {
           setSelectedAccountId(
             nextAccounts.find(
               (account) => account.connectionStatus === "CONNECTED"
-            )?.id ??
-              nextAccounts[0]?.id ??
+            )?.xUserId ??
+              nextAccounts[0]?.xUserId ??
               ""
           );
         }
@@ -144,7 +148,7 @@ export default function XPage() {
   const firstPost = posts[0] ?? "";
   const firstAnalysis = analyzeXText(firstPost);
   const selectedAccount = accounts.find(
-    (account) => account.id === selectedAccountId
+    (account) => account.xUserId === selectedAccountId
   );
   const hasLink = posts.some((post) => Boolean(extractFirstLink(post)));
   const canCreateDraft =
@@ -322,7 +326,7 @@ export default function XPage() {
                 </option>
               ) : null}
               {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
+                <option key={account.id} value={account.xUserId}>
                   @{account.username} - {account.accountName}
                 </option>
               ))}
@@ -342,12 +346,15 @@ export default function XPage() {
               type="button"
               className={`flex flex-1 items-center justify-center gap-xs rounded-lg px-md py-sm font-label-md text-label-md transition-colors ${
                 activeTab === tab
-                  ? "bg-surface shadow-sm text-on-surface"
+                  ? "bg-surface text-on-surface shadow-sm"
                   : "text-on-surface-variant hover:text-on-surface"
               }`}
               onClick={() => setActiveTab(tab)}
             >
-              <MaterialIcon name={tab === "manual" ? "edit" : "auto_awesome"} size={18} />
+              <MaterialIcon
+                name={tab === "manual" ? "edit" : "auto_awesome"}
+                size={18}
+              />
               {tab === "manual" ? "Manuel" : "AI ile Toplu Yükle"}
             </button>
           ))}
@@ -357,19 +364,25 @@ export default function XPage() {
         {activeTab === "ai" && (
           <div className="space-y-md">
             {aiProcessing ? (
-              <ProcessingIndicator fileCount={aiFiles.length + (aiRawText ? 1 : 0)} />
+              <ProcessingIndicator
+                fileCount={aiFiles.length + (aiRawText ? 1 : 0)}
+              />
             ) : (
               <>
-                <section className="panel-card p-md space-y-md">
+                <section className="panel-card space-y-md p-md">
                   <div className="flex items-center gap-sm">
-                    <MaterialIcon name="auto_awesome" className="text-primary" />
+                    <MaterialIcon
+                      name="auto_awesome"
+                      className="text-primary"
+                    />
                     <h2 className="font-headline-sm text-headline-sm">
                       AI ile Toplu X Gönderisi Yükleme
                     </h2>
                   </div>
                   <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Metinleri aşağıya yapıştırın veya dosya yükleyin. AI her gönderiyi
-                    ayrıştırıp thread/tek gönderi olarak yapılandıracaktır.
+                    Metinleri aşağıya yapıştırın veya dosya yükleyin. AI her
+                    gönderiyi ayrıştırıp thread/tek gönderi olarak
+                    yapılandıracaktır.
                   </p>
                   <label className="block space-y-xs">
                     <span className="font-label-sm text-label-sm text-on-surface-variant">
@@ -383,10 +396,18 @@ export default function XPage() {
                       onChange={(e) => setAiRawText(e.target.value)}
                     />
                   </label>
-                  <BulkUploadZone files={aiFiles} onChange={setAiFiles} disabled={aiProcessing} />
+                  <BulkUploadZone
+                    files={aiFiles}
+                    onChange={setAiFiles}
+                    disabled={aiProcessing}
+                  />
                 </section>
                 <section className="panel-card p-md">
-                  <InstructionInput value={aiInstruction} onChange={setAiInstruction} disabled={aiProcessing} />
+                  <InstructionInput
+                    value={aiInstruction}
+                    onChange={setAiInstruction}
+                    disabled={aiProcessing}
+                  />
                 </section>
                 {aiError && (
                   <div className="rounded-xl border border-error/20 bg-error-container p-md text-on-error-container">
@@ -397,31 +418,64 @@ export default function XPage() {
                   <button
                     type="button"
                     className="primary-button px-lg py-sm font-label-md text-label-md disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={(!aiRawText.trim() && aiFiles.length === 0) || !selectedAccountId}
+                    disabled={
+                      (!aiRawText.trim() && aiFiles.length === 0) ||
+                      !selectedAccountId
+                    }
                     onClick={async () => {
-                      if (!selectedAccountId) { setAiError("Hesap seçin."); return; }
-                      setAiProcessing(true); setAiError(null);
+                      if (!selectedAccountId) {
+                        setAiError("Hesap seçin.");
+                        return;
+                      }
+                      setAiProcessing(true);
+                      setAiError(null);
                       try {
                         const uploadedMediaIds: string[] = [];
                         const uploadedDocIds: string[] = [];
                         for (const f of aiFiles) {
-                          const fd = new FormData(); fd.append("file", f.file);
-                          const r = await fetch("/api/media", { method: "POST", body: fd });
-                          const p = (await r.json()) as { data?: { id: string }; error?: string };
-                          if (!r.ok || !p.data) throw new Error(p.error ?? `${f.file.name} yüklenemedi.`);
-                          if (f.type === "image") uploadedMediaIds.push(p.data.id);
+                          const fd = new FormData();
+                          fd.append("file", f.file);
+                          const r = await fetch("/api/media", {
+                            method: "POST",
+                            body: fd
+                          });
+                          const p = (await r.json()) as {
+                            data?: { id: string };
+                            error?: string;
+                          };
+                          if (!r.ok || !p.data)
+                            throw new Error(
+                              p.error ?? `${f.file.name} yüklenemedi.`
+                            );
+                          if (f.type === "image")
+                            uploadedMediaIds.push(p.data.id);
                           else uploadedDocIds.push(p.data.id);
                         }
                         const res = await fetch("/api/ai/process", {
-                          method: "POST", headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ platform: "X", accountId: selectedAccountId,
-                            mediaFileIds: uploadedMediaIds, documentFileIds: uploadedDocIds,
-                            rawText: aiRawText || undefined, instructionText: aiInstruction })
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            platform: "X",
+                            accountId: selectedAccountId,
+                            mediaFileIds: uploadedMediaIds,
+                            documentFileIds: uploadedDocIds,
+                            rawText: aiRawText || undefined,
+                            instructionText: aiInstruction
+                          })
                         });
-                        const payload = (await res.json()) as { data?: { batchId: string }; error?: string };
-                        if (!res.ok || !payload.data) throw new Error(payload.error ?? "İşleme başarısız.");
+                        const payload = (await res.json()) as {
+                          data?: { batchId: string };
+                          error?: string;
+                        };
+                        if (!res.ok || !payload.data)
+                          throw new Error(payload.error ?? "İşleme başarısız.");
                         router.push(`/review/${payload.data.batchId}`);
-                      } catch (err) { setAiError(err instanceof Error ? err.message : "Hata."); setAiProcessing(false); }
+                      } catch (err) {
+                        setAiError(
+                          err instanceof Error ? err.message : "Hata."
+                        );
+                        setAiProcessing(false);
+                      }
                     }}
                   >
                     <MaterialIcon name="auto_awesome" size={18} />

@@ -33,6 +33,7 @@ type CardForPublish = {
 
 /** Bir kart icin PublishContext olusturur (krediler decrypt edilir). */
 async function buildPublishContext(card: CardForPublish): Promise<{
+  accountId: string;
   context: PublishContext;
   refreshCredentials: () => Promise<PublishContext["credentials"] | null>;
 } | null> {
@@ -78,6 +79,7 @@ async function buildPublishContext(card: CardForPublish): Promise<{
     };
 
     return {
+      accountId: card.accountId,
       context,
       refreshCredentials: async () => {
         const env = getEnv();
@@ -103,26 +105,40 @@ async function buildPublishContext(card: CardForPublish): Promise<{
   }
 
   if (card.platform === Platform.X) {
-    const tokens = await getXTokens(card.accountId);
+    const tokens = await getXTokens(card.accountId, {
+      allowSingleAccountFallback: true
+    });
 
     if (!tokens) {
       return null;
     }
 
+    if (tokens.xUserId !== card.accountId) {
+      await prisma.contentCard.update({
+        where: { id: card.id },
+        data: {
+          accountId: tokens.xUserId,
+          errorCode: null,
+          errorMessage: null
+        }
+      });
+    }
+
     const context: PublishContext = {
-      card: { ...card, platformData },
+      card: { ...card, accountId: tokens.xUserId, platformData },
       credentials: { accessToken: tokens.accessToken },
       loadMedia
     };
 
     return {
+      accountId: tokens.xUserId,
       context,
       refreshCredentials: async () => {
         if (!tokens.refreshToken) {
           return null;
         }
         const refreshed = await refreshXAccessToken(tokens.refreshToken);
-        await updateXTokens(card.accountId, {
+        await updateXTokens(tokens.xUserId, {
           accessToken: refreshed.accessToken,
           refreshToken: refreshed.refreshToken ?? tokens.refreshToken,
           tokenExpiresAt: refreshed.expiresAt
@@ -145,7 +161,11 @@ async function buildPublishContext(card: CardForPublish): Promise<{
       loadMedia
     };
 
-    return { context, refreshCredentials: async () => null };
+    return {
+      accountId: card.accountId,
+      context,
+      refreshCredentials: async () => null
+    };
   }
 
   const customSite = await getCustomSiteCredentials(card.accountId);
@@ -161,7 +181,11 @@ async function buildPublishContext(card: CardForPublish): Promise<{
     buildSignedMediaUrl
   };
 
-  return { context, refreshCredentials: async () => null };
+  return {
+    accountId: card.accountId,
+    context,
+    refreshCredentials: async () => null
+  };
 }
 
 /**
@@ -196,13 +220,14 @@ export async function publishCard(
     return { ok: false, error };
   }
 
+  const logCard = { ...card, accountId: built.accountId };
   const outcome = await runPublish(built.context, {
     refreshCredentials: built.refreshCredentials
   });
 
   if (outcome.ok) {
     await writeLog(
-      card,
+      logCard,
       PublishLogStatus.OK,
       "publish",
       outcome.result.apiResponse,
@@ -210,13 +235,13 @@ export async function publishCard(
     );
   } else {
     await writeLog(
-      card,
+      logCard,
       PublishLogStatus.ERROR,
       "publish",
       outcome.error.apiResponse,
       outcome.error
     );
-    await updateConnectionStatusFromPublishError(card, outcome.error);
+    await updateConnectionStatusFromPublishError(logCard, outcome.error);
   }
 
   return outcome;
@@ -263,7 +288,7 @@ function missingCredentialsError(card: CardForPublish) {
     [Platform.INSTAGRAM]:
       "Instagram hesabı bulunamadı veya access token kaydı yok. Kart eski/silinmiş bir hesaba bağlı olabilir.",
     [Platform.X]:
-      "X hesabı bulunamadı veya access token kaydı yok. Kart eski/silinmiş bir hesaba bağlı olabilir; kartı mevcut X hesabıyla yeniden oluşturun veya accountId değerini taşıyın.",
+      "Bu kartın bağlı olduğu X kullanıcı kimliği için aktif hesap/token bulunamadı. Aynı X hesabını yeniden bağlayın; token yenilense bile kartlar bu kullanıcı kimliğiyle çalışmaya devam eder.",
     [Platform.WORDPRESS]:
       "WordPress sitesi bulunamadı veya credential kaydı yok. Kart eski/silinmiş bir siteye bağlı olabilir.",
     [Platform.CUSTOM_SITE]:

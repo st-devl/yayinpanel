@@ -43,25 +43,30 @@ export async function getAccountDeletionBlocker(
   platform: Platform,
   accountId: string
 ): Promise<AccountDeletionBlocker | null> {
+  const accountReferences = await accountReferencesForDeletion(
+    platform,
+    accountId
+  );
+
   const [contentCards, processingBatches, reviewItems] = await Promise.all([
     prisma.contentCard.count({
       where: {
         platform,
-        accountId,
+        accountId: { in: accountReferences },
         status: { in: activeContentStatuses }
       }
     }),
     prisma.processingBatch.count({
       where: {
         platform,
-        accountId,
+        accountId: { in: accountReferences },
         status: { in: activeBatchStatuses }
       }
     }),
     prisma.processingItem.count({
       where: {
         platform,
-        accountId,
+        accountId: { in: accountReferences },
         reviewStatus: { in: activeReviewStatuses }
       }
     })
@@ -72,6 +77,22 @@ export async function getAccountDeletionBlocker(
   }
 
   return { contentCards, processingBatches, reviewItems };
+}
+
+async function accountReferencesForDeletion(
+  platform: Platform,
+  accountId: string
+) {
+  if (platform !== Platform.X) {
+    return [accountId];
+  }
+
+  const account = await prisma.xAccount.findFirst({
+    where: { OR: [{ id: accountId }, { xUserId: accountId }] },
+    select: { id: true, xUserId: true }
+  });
+
+  return account ? [account.id, account.xUserId] : [accountId];
 }
 
 export function accountDeletionBlockedMessage(blocker: AccountDeletionBlocker) {

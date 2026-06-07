@@ -8,6 +8,7 @@ import {
   createContentCardsBulk,
   listContentCards
 } from "@/lib/server/content-cards";
+import { resolveStableXAccountId } from "@/lib/server/account-credentials";
 import { getSetting } from "@/lib/server/settings";
 import { prisma } from "@/lib/server/prisma";
 import { buildBulkSchedule, type ScheduleFrequency } from "@/lib/timezone";
@@ -85,8 +86,11 @@ export async function POST(request: NextRequest) {
   const { platform, accountId, items, schedule, saveAsDraft } = parsed.data;
 
   // Hesap dogrulamasi (aktif hesap zorunlu).
-  const accountExists = await accountExistsForPlatform(platform, accountId);
-  if (!accountExists) {
+  const stableAccountId = await resolveStableAccountIdForPlatform(
+    platform,
+    accountId
+  );
+  if (!stableAccountId) {
     return NextResponse.json(
       { error: "Secili hesap bulunamadi veya gecersiz" },
       { status: 400 }
@@ -129,7 +133,7 @@ export async function POST(request: NextRequest) {
 
   const inputs: CreateContentCardInput[] = items.map((item, index) => ({
     platform,
-    accountId,
+    accountId: stableAccountId,
     accountType: platform,
     text: item.text ?? null,
     mediaFileId: item.mediaFileId ?? null,
@@ -147,20 +151,25 @@ export async function POST(request: NextRequest) {
   );
 }
 
-async function accountExistsForPlatform(platform: Platform, accountId: string) {
+async function resolveStableAccountIdForPlatform(
+  platform: Platform,
+  accountId: string
+) {
   if (platform === Platform.INSTAGRAM) {
-    return Boolean(
-      await prisma.instagramAccount.findUnique({ where: { id: accountId } })
-    );
+    const account = await prisma.instagramAccount.findUnique({
+      where: { id: accountId },
+      select: { id: true }
+    });
+    return account?.id ?? null;
   }
   if (platform === Platform.X) {
-    return Boolean(
-      await prisma.xAccount.findUnique({ where: { id: accountId } })
-    );
+    return resolveStableXAccountId(accountId);
   }
-  return Boolean(
-    await prisma.wordPressSite.findUnique({ where: { id: accountId } })
-  );
+  const site = await prisma.wordPressSite.findUnique({
+    where: { id: accountId },
+    select: { id: true }
+  });
+  return site?.id ?? null;
 }
 
 async function validateItems(

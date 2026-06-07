@@ -100,7 +100,7 @@ model XAccount {
   id                    String           @id @default(cuid())
   accountName           String
   username              String
-  xUserId               String
+  xUserId               String           @unique
   profileImageUrl       String?
   accessTokenEncrypted  String
   refreshTokenEncrypted String?
