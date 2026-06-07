@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/server/session";
 import { getEnv } from "@/lib/server/env";
 import { getXOAuthCredentials } from "@/lib/server/x-credentials";
@@ -17,15 +17,24 @@ function base64Url(buffer: Buffer): string {
     .replace(/=+$/, "");
 }
 
-/** "X ile Baglan": PKCE verifier/state uretir, cookie'ye yazar, X'e yonlendirir. */
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.redirect(new URL("/login", getEnv().APP_BASE_URL));
-  }
+function buildCanonicalStartUrl(appUrl: string): URL {
+  return new URL("/api/accounts/x/oauth/start", appUrl);
+}
 
+/** "X ile Baglan": PKCE verifier/state uretir, cookie'ye yazar, X'e yonlendirir. */
+export async function GET(request: NextRequest) {
   const env = getEnv();
   const appUrl = env.APP_BASE_URL;
+  const canonicalStartUrl = buildCanonicalStartUrl(appUrl);
+
+  if (request.nextUrl.origin !== canonicalStartUrl.origin) {
+    return NextResponse.redirect(canonicalStartUrl);
+  }
+
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.redirect(new URL("/login", appUrl));
+  }
 
   const credentials = await getXOAuthCredentials();
   if (!credentials.clientId || !credentials.clientSecret) {

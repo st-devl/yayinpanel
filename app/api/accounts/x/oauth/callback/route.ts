@@ -39,8 +39,12 @@ export async function GET(request: NextRequest) {
   const savedState = request.cookies.get(STATE_COOKIE)?.value;
   const codeVerifier = request.cookies.get(VERIFIER_COOKIE)?.value;
 
-  if (!code || !state || !savedState || !codeVerifier) {
-    return redirectWith(appUrl, { xoauth: "invalid" });
+  if (!code || !state) {
+    return redirectWith(appUrl, { xoauth: "missing_params" });
+  }
+
+  if (!savedState || !codeVerifier) {
+    return redirectWith(appUrl, { xoauth: "session_missing" });
   }
 
   if (state !== savedState) {

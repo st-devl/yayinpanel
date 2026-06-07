@@ -305,6 +305,16 @@ export default function AccountsPage() {
         tone: "error",
         message: "X yetkilendirme yanıtı geçersiz. Tekrar deneyin."
       },
+      missing_params: {
+        tone: "error",
+        message:
+          "X callback yanıtında code/state eksik. Callback adresini elle açmayın; X ile Bağlan butonundan başlatın."
+      },
+      session_missing: {
+        tone: "error",
+        message:
+          "X OAuth oturumu bulunamadı. X ile Bağlan butonuna tekrar basın; yayinpanel.cloud / www.yayinpanel.cloud karışıklığını kontrol edin."
+      },
       verify_failed: {
         tone: "error",
         message: "X kullanıcı bilgisi doğrulanamadı. İzinleri kontrol edin."
