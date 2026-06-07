@@ -453,18 +453,29 @@ export default function LogsPage() {
                   value={selectedLog.contentCardId ?? "-"}
                 />
                 <DetailItem
-                  label="Kart Durumu"
+                  label="Güncel Kart Durumu"
                   value={selectedLog.contentCard?.status ?? "-"}
                 />
                 <DetailItem
-                  label="Hata Kodu"
+                  label="Log Hata Kodu"
                   value={selectedLog.errorCode ?? "-"}
                 />
                 <DetailItem
-                  label="Hata Mesajı"
+                  label="Log Hata Mesajı"
                   value={selectedLog.errorMessage ?? "-"}
                 />
               </dl>
+
+              {selectedLog.status === "ERROR" &&
+              selectedLog.contentCard?.status === "SCHEDULED" ? (
+                <div className="mt-md rounded-lg border border-blue-200 bg-blue-50 p-sm text-blue-900">
+                  <p className="font-body-sm text-body-sm">
+                    Bu satır eski bir yayın denemesinin hata logudur. Kart şu
+                    anda yeniden planlanmış durumda; yeni yayın denemesi için en
+                    güncel sonucu yeni log kaydından kontrol edin.
+                  </p>
+                </div>
+              ) : null}
 
               {selectedLog.contentCard?.externalPostUrl ? (
                 <a

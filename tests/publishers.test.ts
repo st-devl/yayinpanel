@@ -201,6 +201,58 @@ describe("XPublisher (mock API)", () => {
       tweetId: "tweet-with-v1-media"
     });
   });
+
+  it("explains OAuth1 media upload permission failures separately", async () => {
+    vi.stubEnv("X_API_KEY", "api-key");
+    vi.stubEnv("X_API_SECRET", "api-secret");
+
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            detail: "Forbidden",
+            status: 403,
+            title: "Forbidden",
+            type: "about:blank"
+          },
+          403
+        )
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            detail: "Forbidden",
+            status: 403,
+            title: "Forbidden",
+            type: "about:blank"
+          },
+          403
+        )
+      );
+
+    await expect(
+      new XPublisher().publish({
+        ...xContext,
+        card: { ...xContext.card, mediaFileId: "media-file-1" },
+        credentials: {
+          accessToken: "token",
+          xOAuth1: {
+            accessToken: "oauth1-token",
+            accessTokenSecret: "oauth1-secret"
+          }
+        },
+        loadMedia: async () => ({
+          buffer: Buffer.from("image"),
+          fileName: "image.png",
+          fileSize: 5,
+          mimeType: "image/png"
+        })
+      })
+    ).rejects.toMatchObject({
+      code: "X_MEDIA_UPLOAD_FAILED",
+      message: expect.stringContaining("OAuth1 medya yükleme")
+    });
+  });
 });
 
 describe("runPublish 401 refresh + retry", () => {

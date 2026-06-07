@@ -160,7 +160,7 @@ export class XPublisher implements Publisher {
       throw classifyHttpStatus(
         result.status,
         "X_MEDIA_UPLOAD_FAILED",
-        xMediaErrorMessage(result.status, result.json),
+        xOAuth1MediaErrorMessage(result.status, result.json),
         result.json
       );
     }
@@ -236,6 +236,14 @@ function xMediaErrorMessage(status: number, json: unknown): string {
   }
 
   return xErrorMessage(json, "X medya yuklemesi basarisiz");
+}
+
+function xOAuth1MediaErrorMessage(status: number, json: unknown): string {
+  if (isXPermissionFailure(status, json)) {
+    return "X OAuth1 medya yükleme izni reddedildi. X_API_KEY/X_API_SECRET ile OAuth1 Access Token/Secret aynı X uygulamasına ait olmalı; Access Token kullanıcı bağlamında Read and write iznine sahip olmalı.";
+  }
+
+  return xErrorMessage(json, "X OAuth1 medya yuklemesi basarisiz");
 }
 
 function xErrorMessage(json: unknown, fallback: string): string {
