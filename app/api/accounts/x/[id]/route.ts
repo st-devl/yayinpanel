@@ -12,8 +12,10 @@ import { prisma } from "@/lib/server/prisma";
 type RouteContext = { params: Promise<{ id: string }> };
 
 const updateSchema = z.object({
-  accessToken: z.string().min(1),
+  accessToken: z.string().min(1).optional(),
   refreshToken: z.string().optional(),
+  oauth1AccessToken: z.string().optional(),
+  oauth1AccessTokenSecret: z.string().optional(),
   tokenExpiresAt: z.coerce.date().optional()
 });
 
@@ -40,7 +42,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const updated = await updateXTokens(id, {
     accessToken: parsed.data.accessToken,
     refreshToken: parsed.data.refreshToken,
-    tokenExpiresAt: parsed.data.tokenExpiresAt ?? null
+    oauth1AccessToken: parsed.data.oauth1AccessToken,
+    oauth1AccessTokenSecret: parsed.data.oauth1AccessTokenSecret,
+    tokenExpiresAt: parsed.data.tokenExpiresAt
   });
 
   return NextResponse.json({ data: updated });

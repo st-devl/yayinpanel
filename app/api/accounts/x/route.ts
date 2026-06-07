@@ -16,6 +16,8 @@ const createSchema = z.object({
   xUserId: z.string().min(1),
   accessToken: z.string().min(1),
   refreshToken: z.string().optional(),
+  oauth1AccessToken: z.string().optional(),
+  oauth1AccessTokenSecret: z.string().optional(),
   profileImageUrl: z.string().url().optional(),
   tokenExpiresAt: z.coerce.date().optional()
 });
@@ -26,10 +28,27 @@ export async function GET() {
 
   const accounts = await prisma.xAccount.findMany({
     orderBy: { createdAt: "desc" },
-    select: xAccountSafeSelect
+    select: {
+      ...xAccountSafeSelect,
+      oauth1AccessTokenEncrypted: true,
+      oauth1AccessTokenSecretEncrypted: true
+    }
   });
 
-  return NextResponse.json({ data: accounts });
+  return NextResponse.json({
+    data: accounts.map(
+      ({
+        oauth1AccessTokenEncrypted,
+        oauth1AccessTokenSecretEncrypted,
+        ...account
+      }) => ({
+        ...account,
+        hasOAuth1MediaCredentials: Boolean(
+          oauth1AccessTokenEncrypted && oauth1AccessTokenSecretEncrypted
+        )
+      })
+    )
+  });
 }
 
 export async function POST(request: NextRequest) {

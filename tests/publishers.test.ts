@@ -6,6 +6,7 @@ import type { PublishContext } from "@/lib/publishers/types";
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 function jsonResponse(body: unknown, status = 200) {
@@ -124,6 +125,80 @@ describe("XPublisher (mock API)", () => {
     expect(result.apiResponse).toMatchObject({
       mediaIds: ["media-1"],
       tweetId: "tweet-1"
+    });
+  });
+
+  it("falls back to OAuth1 v1.1 media upload when OAuth2 media upload is forbidden", async () => {
+    vi.stubEnv("X_API_KEY", "api-key");
+    vi.stubEnv("X_API_SECRET", "api-secret");
+
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (url, init) => {
+        const href = String(url);
+
+        if (href === "https://api.x.com/2/media/upload") {
+          expect(init?.headers).toEqual({
+            Authorization: "Bearer token"
+          });
+          return jsonResponse(
+            {
+              detail: "Forbidden",
+              status: 403,
+              title: "Forbidden",
+              type: "about:blank"
+            },
+            403
+          );
+        }
+
+        if (href === "https://upload.twitter.com/1.1/media/upload.json") {
+          const headers = init?.headers as Record<string, string>;
+          expect(headers.Authorization).toContain("OAuth ");
+          expect(headers.Authorization).toContain(
+            'oauth_consumer_key="api-key"'
+          );
+          expect(headers.Authorization).toContain(
+            'oauth_token="oauth1-token"'
+          );
+          expect(init?.body).toBeInstanceOf(FormData);
+          expect((init?.body as FormData).get("media_category")).toBe(
+            "tweet_image"
+          );
+          return jsonResponse({ media_id_string: "media-v1" });
+        }
+
+        expect(href).toBe("https://api.x.com/2/tweets");
+        expect(JSON.parse(String(init?.body))).toEqual({
+          media: { media_ids: ["media-v1"] },
+          text: "Merhaba dunya"
+        });
+        return jsonResponse({ data: { id: "tweet-with-v1-media" } });
+      });
+
+    const result = await new XPublisher().publish({
+      ...xContext,
+      card: { ...xContext.card, mediaFileId: "media-file-1" },
+      credentials: {
+        accessToken: "token",
+        xOAuth1: {
+          accessToken: "oauth1-token",
+          accessTokenSecret: "oauth1-secret"
+        }
+      },
+      loadMedia: async () => ({
+        buffer: Buffer.from("image"),
+        fileName: "image.png",
+        fileSize: 5,
+        mimeType: "image/png"
+      })
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result.externalPostId).toBe("tweet-with-v1-media");
+    expect(result.apiResponse).toMatchObject({
+      mediaIds: ["media-v1"],
+      tweetId: "tweet-with-v1-media"
     });
   });
 });

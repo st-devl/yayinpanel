@@ -1,9 +1,12 @@
 import "server-only";
 
 import { Platform } from "@prisma/client";
+import { buildOAuth1AuthorizationHeader } from "@/lib/integrations/oauth1";
 import { classifyHttpStatus, permanentError } from "@/lib/publishers/errors";
 import { fetchWithTimeout, readJsonResponse } from "@/lib/publishers/http";
+import { getEnv } from "@/lib/server/env";
 import type {
+  PublishCredentials,
   PublishContext,
   PublishMedia,
   PublishResult,
@@ -11,6 +14,8 @@ import type {
 } from "@/lib/publishers/types";
 
 const X_API_BASE = "https://api.x.com/2";
+const X_V1_MEDIA_UPLOAD_URL =
+  "https://upload.twitter.com/1.1/media/upload.json";
 
 const X_TWEET_PERMISSION_MESSAGE =
   "X gönderim izni reddedildi. X Developer Portal'da uygulama izinlerini Read and write yapın; ardından hesabı tweet.write/users.read kapsamlarıyla yeniden bağlayın.";
@@ -37,9 +42,7 @@ export class XPublisher implements Publisher {
       const media = await context.loadMedia();
 
       if (media) {
-        mediaIds.push(
-          await this.uploadMedia(context.credentials.accessToken, media)
-        );
+        mediaIds.push(await this.uploadMedia(context.credentials, media));
       }
     }
 
@@ -59,7 +62,7 @@ export class XPublisher implements Publisher {
   }
 
   private async uploadMedia(
-    accessToken: string,
+    credentials: PublishCredentials,
     media: PublishMedia
   ): Promise<string> {
     const mediaCategory = mediaCategoryForMimeType(media.mimeType);
@@ -71,23 +74,25 @@ export class XPublisher implements Publisher {
       );
     }
 
-    const form = new FormData();
-    form.append(
-      "media",
-      new Blob([new Uint8Array(media.buffer)], { type: media.mimeType }),
-      media.fileName
-    );
-    form.append("media_category", mediaCategory);
-    form.append("media_type", media.mimeType);
+    const form = buildMediaForm(media, mediaCategory);
 
     const response = await fetchWithTimeout(`${X_API_BASE}/media/upload`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${credentials.accessToken}` },
       body: form
     });
     const result = await readJsonResponse(response);
 
     if (!result.ok) {
+      if (isXPermissionFailure(result.status, result.json)) {
+        return this.uploadMediaWithOAuth1Fallback(
+          credentials,
+          media,
+          mediaCategory,
+          result
+        );
+      }
+
       throw classifyHttpStatus(
         result.status,
         "X_MEDIA_UPLOAD_FAILED",
@@ -101,6 +106,70 @@ export class XPublisher implements Publisher {
       media_id_string?: string;
     };
     const mediaIdString = body?.data?.id ?? body?.media_id_string;
+
+    if (!mediaIdString) {
+      throw permanentError("X_MEDIA_NO_ID", "X medya id alinamadi", {
+        apiResponse: result.json
+      });
+    }
+
+    return mediaIdString;
+  }
+
+  private async uploadMediaWithOAuth1Fallback(
+    credentials: PublishCredentials,
+    media: PublishMedia,
+    mediaCategory: "tweet_image",
+    oauth2Result: Awaited<ReturnType<typeof readJsonResponse>>
+  ): Promise<string> {
+    const env = getEnv();
+
+    if (!credentials.xOAuth1?.accessToken || !credentials.xOAuth1.accessTokenSecret) {
+      throw classifyHttpStatus(
+        oauth2Result.status,
+        "X_MEDIA_UPLOAD_FAILED",
+        "X medya yükleme izni reddedildi. OAuth2 media.write bu X uygulamasında/grant ekranında yoksa Hesap Bağlantıları > X hesabı > Yenile bölümüne OAuth1 Access Token ve Access Token Secret ekleyin.",
+        oauth2Result.json
+      );
+    }
+
+    if (!env.X_API_KEY || !env.X_API_SECRET) {
+      throw permanentError(
+        "X_MEDIA_OAUTH1_CONFIG_MISSING",
+        "X medya yükleme için X_API_KEY ve X_API_SECRET sunucu ortamında tanımlı olmalı"
+      );
+    }
+
+    const response = await fetchWithTimeout(X_V1_MEDIA_UPLOAD_URL, {
+      method: "POST",
+      headers: {
+        Authorization: buildOAuth1AuthorizationHeader({
+          consumerKey: env.X_API_KEY,
+          consumerSecret: env.X_API_SECRET,
+          method: "POST",
+          token: credentials.xOAuth1.accessToken,
+          tokenSecret: credentials.xOAuth1.accessTokenSecret,
+          url: X_V1_MEDIA_UPLOAD_URL
+        })
+      },
+      body: buildMediaForm(media, mediaCategory)
+    });
+    const result = await readJsonResponse(response);
+
+    if (!result.ok) {
+      throw classifyHttpStatus(
+        result.status,
+        "X_MEDIA_UPLOAD_FAILED",
+        xMediaErrorMessage(result.status, result.json),
+        result.json
+      );
+    }
+
+    const body = result.json as {
+      media_id_string?: string;
+      media_id?: number | string;
+    };
+    const mediaIdString = body.media_id_string ?? body.media_id?.toString();
 
     if (!mediaIdString) {
       throw permanentError("X_MEDIA_NO_ID", "X medya id alinamadi", {
@@ -227,4 +296,20 @@ function mediaCategoryForMimeType(mimeType: string): "tweet_image" | null {
   }
 
   return null;
+}
+
+function buildMediaForm(
+  media: PublishMedia,
+  mediaCategory: "tweet_image"
+): FormData {
+  const form = new FormData();
+  form.append(
+    "media",
+    new Blob([new Uint8Array(media.buffer)], { type: media.mimeType }),
+    media.fileName
+  );
+  form.append("media_category", mediaCategory);
+  form.append("media_type", media.mimeType);
+
+  return form;
 }

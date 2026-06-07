@@ -27,6 +27,11 @@ export type PublishContext = {
 export type PublishCredentials = {
   accessToken: string;
   refreshToken?: string | null;
+  /** X v1.1 media upload fallback icin OAuth 1.0a user credentials. */
+  xOAuth1?: {
+    accessToken: string;
+    accessTokenSecret: string;
+  } | null;
   /** Instagram icin business account id. */
   instagramBusinessAccountId?: string;
   /** WordPress icin site temel bilgileri. */

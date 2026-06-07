@@ -126,7 +126,7 @@ async function buildPublishContext(card: CardForPublish): Promise<{
 
     const context: PublishContext = {
       card: { ...card, accountId: tokens.xUserId, platformData },
-      credentials: { accessToken: tokens.accessToken },
+      credentials: { accessToken: tokens.accessToken, xOAuth1: tokens.oauth1 },
       loadMedia
     };
 
@@ -143,7 +143,7 @@ async function buildPublishContext(card: CardForPublish): Promise<{
           refreshToken: refreshed.refreshToken ?? tokens.refreshToken,
           tokenExpiresAt: refreshed.expiresAt
         });
-        return { accessToken: refreshed.accessToken };
+        return { accessToken: refreshed.accessToken, xOAuth1: tokens.oauth1 };
       }
     };
   }

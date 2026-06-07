@@ -86,6 +86,8 @@ export type CreateXAccountInput = {
   xUserId: string;
   accessToken: string;
   refreshToken?: string | null;
+  oauth1AccessToken?: string | null;
+  oauth1AccessTokenSecret?: string | null;
   profileImageUrl?: string | null;
   tokenExpiresAt?: Date | null;
   connectionStatus?: ConnectionStatus;
@@ -159,7 +161,9 @@ async function findXAccountByReference(
       id: true,
       xUserId: true,
       accessTokenEncrypted: true,
-      refreshTokenEncrypted: true
+      refreshTokenEncrypted: true,
+      oauth1AccessTokenEncrypted: true,
+      oauth1AccessTokenSecretEncrypted: true
     }
   });
 
@@ -175,7 +179,9 @@ async function findXAccountByReference(
       id: true,
       xUserId: true,
       accessTokenEncrypted: true,
-      refreshTokenEncrypted: true
+      refreshTokenEncrypted: true,
+      oauth1AccessTokenEncrypted: true,
+      oauth1AccessTokenSecretEncrypted: true
     }
   });
 
@@ -264,6 +270,19 @@ export async function createXAccount(
       refreshTokenEncrypted: input.refreshToken
         ? encryptSecret(normalizeSecret(input.refreshToken, "X refresh token"))
         : null,
+      oauth1AccessTokenEncrypted: input.oauth1AccessToken
+        ? encryptSecret(
+            normalizeSecret(input.oauth1AccessToken, "X OAuth1 access token")
+          )
+        : null,
+      oauth1AccessTokenSecretEncrypted: input.oauth1AccessTokenSecret
+        ? encryptSecret(
+            normalizeSecret(
+              input.oauth1AccessTokenSecret,
+              "X OAuth1 access token secret"
+            )
+          )
+        : null,
       tokenExpiresAt: input.tokenExpiresAt,
       connectionStatus: input.connectionStatus ?? ConnectionStatus.CONNECTED,
       lastError: input.lastError
@@ -282,6 +301,8 @@ export async function upsertXAccountFromOAuth(input: {
   accountName?: string;
   accessToken: string;
   refreshToken?: string | null;
+  oauth1AccessToken?: string | null;
+  oauth1AccessTokenSecret?: string | null;
   tokenExpiresAt?: Date | null;
   profileImageUrl?: string | null;
 }): Promise<SafeXAccount> {
@@ -291,6 +312,19 @@ export async function upsertXAccountFromOAuth(input: {
   const refreshTokenEncrypted = input.refreshToken
     ? encryptSecret(normalizeSecret(input.refreshToken, "X refresh token"))
     : null;
+  const oauth1AccessTokenEncrypted = input.oauth1AccessToken
+    ? encryptSecret(
+        normalizeSecret(input.oauth1AccessToken, "X OAuth1 access token")
+      )
+    : undefined;
+  const oauth1AccessTokenSecretEncrypted = input.oauth1AccessTokenSecret
+    ? encryptSecret(
+        normalizeSecret(
+          input.oauth1AccessTokenSecret,
+          "X OAuth1 access token secret"
+        )
+      )
+    : undefined;
   const username = input.username.trim().replace(/^@+/, "");
 
   const existing = await prisma.xAccount.findFirst({
@@ -306,6 +340,8 @@ export async function upsertXAccountFromOAuth(input: {
         username,
         accessTokenEncrypted,
         refreshTokenEncrypted,
+        oauth1AccessTokenEncrypted,
+        oauth1AccessTokenSecretEncrypted,
         tokenExpiresAt: input.tokenExpiresAt,
         profileImageUrl: input.profileImageUrl ?? undefined,
         connectionStatus: ConnectionStatus.CONNECTED,
@@ -323,6 +359,9 @@ export async function upsertXAccountFromOAuth(input: {
       profileImageUrl: input.profileImageUrl ?? null,
       accessTokenEncrypted,
       refreshTokenEncrypted,
+      oauth1AccessTokenEncrypted: oauth1AccessTokenEncrypted ?? null,
+      oauth1AccessTokenSecretEncrypted:
+        oauth1AccessTokenSecretEncrypted ?? null,
       tokenExpiresAt: input.tokenExpiresAt,
       connectionStatus: ConnectionStatus.CONNECTED,
       lastError: null
@@ -334,8 +373,10 @@ export async function upsertXAccountFromOAuth(input: {
 export async function updateXTokens(
   accountReference: string,
   input: {
-    accessToken: string;
+    accessToken?: string;
     refreshToken?: string | null;
+    oauth1AccessToken?: string | null;
+    oauth1AccessTokenSecret?: string | null;
     tokenExpiresAt?: Date | null;
   }
 ): Promise<SafeXAccount> {
@@ -348,15 +389,38 @@ export async function updateXTokens(
   return prisma.xAccount.update({
     where: { id: accountId },
     data: {
-      accessTokenEncrypted: encryptSecret(
-        normalizeSecret(input.accessToken, "X access token")
-      ),
+      accessTokenEncrypted:
+        input.accessToken === undefined
+          ? undefined
+          : encryptSecret(normalizeSecret(input.accessToken, "X access token")),
       refreshTokenEncrypted:
         input.refreshToken === undefined
           ? undefined
           : input.refreshToken
             ? encryptSecret(
                 normalizeSecret(input.refreshToken, "X refresh token")
+              )
+            : null,
+      oauth1AccessTokenEncrypted:
+        input.oauth1AccessToken === undefined
+          ? undefined
+          : input.oauth1AccessToken
+            ? encryptSecret(
+                normalizeSecret(
+                  input.oauth1AccessToken,
+                  "X OAuth1 access token"
+                )
+              )
+            : null,
+      oauth1AccessTokenSecretEncrypted:
+        input.oauth1AccessTokenSecret === undefined
+          ? undefined
+          : input.oauth1AccessTokenSecret
+            ? encryptSecret(
+                normalizeSecret(
+                  input.oauth1AccessTokenSecret,
+                  "X OAuth1 access token secret"
+                )
               )
             : null,
       tokenExpiresAt: input.tokenExpiresAt,
@@ -383,6 +447,16 @@ export async function getXTokens(
     refreshToken: account.refreshTokenEncrypted
       ? decryptSecret(account.refreshTokenEncrypted)
       : null,
+    oauth1:
+      account.oauth1AccessTokenEncrypted &&
+      account.oauth1AccessTokenSecretEncrypted
+        ? {
+            accessToken: decryptSecret(account.oauth1AccessTokenEncrypted),
+            accessTokenSecret: decryptSecret(
+              account.oauth1AccessTokenSecretEncrypted
+            )
+          }
+        : null,
     xUserId: account.xUserId
   };
 }

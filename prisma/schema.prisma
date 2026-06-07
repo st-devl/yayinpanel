@@ -104,6 +104,8 @@ model XAccount {
   profileImageUrl       String?
   accessTokenEncrypted  String
   refreshTokenEncrypted String?
+  oauth1AccessTokenEncrypted       String?
+  oauth1AccessTokenSecretEncrypted String?
   tokenExpiresAt        DateTime?
   connectionStatus      ConnectionStatus @default(DISCONNECTED)
   lastError             String?

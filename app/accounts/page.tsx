@@ -36,6 +36,7 @@ type XAccount = {
   accountName: string;
   username: string;
   xUserId: string;
+  hasOAuth1MediaCredentials?: boolean;
   profileImageUrl: string | null;
   tokenExpiresAt: string | null;
   connectionStatus: ConnectionStatus;
@@ -79,6 +80,8 @@ type CreateForm = {
   facebookPageId: string;
   accessToken: string;
   refreshToken: string;
+  oauth1AccessToken: string;
+  oauth1AccessTokenSecret: string;
   xUserId: string;
   tokenExpiresAt: string;
   name: string;
@@ -90,6 +93,8 @@ type CreateForm = {
 type ReconnectForm = {
   accessToken: string;
   refreshToken: string;
+  oauth1AccessToken: string;
+  oauth1AccessTokenSecret: string;
   tokenExpiresAt: string;
   applicationPassword: string;
   apiKey: string;
@@ -109,6 +114,8 @@ const emptyCreateForm: CreateForm = {
   facebookPageId: "",
   instagramBusinessAccountId: "",
   name: "",
+  oauth1AccessToken: "",
+  oauth1AccessTokenSecret: "",
   platform: "INSTAGRAM",
   refreshToken: "",
   tokenExpiresAt: "",
@@ -120,6 +127,8 @@ const emptyReconnectForm: ReconnectForm = {
   accessToken: "",
   apiKey: "",
   applicationPassword: "",
+  oauth1AccessToken: "",
+  oauth1AccessTokenSecret: "",
   refreshToken: "",
   tokenExpiresAt: ""
 };
@@ -425,6 +434,9 @@ export default function AccountsPage() {
       return {
         accountName: createForm.accountName.trim(),
         accessToken: createForm.accessToken.trim(),
+        oauth1AccessToken: createForm.oauth1AccessToken.trim() || undefined,
+        oauth1AccessTokenSecret:
+          createForm.oauth1AccessTokenSecret.trim() || undefined,
         refreshToken: createForm.refreshToken.trim() || undefined,
         tokenExpiresAt: createForm.tokenExpiresAt || undefined,
         username: createForm.username.trim(),
@@ -555,10 +567,21 @@ export default function AccountsPage() {
           : reconnectTarget.platform === "WORDPRESS"
           ? { applicationPassword: reconnectForm.applicationPassword.trim() }
           : {
-              accessToken: reconnectForm.accessToken.trim(),
+              accessToken:
+                reconnectTarget.platform === "X"
+                  ? reconnectForm.accessToken.trim() || undefined
+                  : reconnectForm.accessToken.trim(),
               refreshToken:
                 reconnectTarget.platform === "X"
                   ? reconnectForm.refreshToken.trim() || undefined
+                  : undefined,
+              oauth1AccessToken:
+                reconnectTarget.platform === "X"
+                  ? reconnectForm.oauth1AccessToken.trim() || undefined
+                  : undefined,
+              oauth1AccessTokenSecret:
+                reconnectTarget.platform === "X"
+                  ? reconnectForm.oauth1AccessTokenSecret.trim() || undefined
                   : undefined,
               tokenExpiresAt: reconnectForm.tokenExpiresAt || undefined
             };
@@ -768,7 +791,8 @@ export default function AccountsPage() {
                     <p className="font-body-sm text-body-sm">
                       X&apos;te yetki verin; gönderi atmak için OAuth2 kullanıcı
                       token&apos;ı alınır. X uygulaması Developer Portal&apos;da
-                      Read and write izinli olmalıdır.
+                      Read and write izinli olmalıdır. Görsel yükleme için
+                      OAuth1 token/secret ayrıca eklenebilir.
                     </p>
                   </div>
                   <button
@@ -793,26 +817,53 @@ export default function AccountsPage() {
                     value={createForm.xUserId}
                     onChange={(value) => updateCreateField("xUserId", value)}
                   />
-                <TextInput
-                  label="OAuth2 Access Token"
-                  type="password"
-                  value={createForm.accessToken}
-                  onChange={(value) => updateCreateField("accessToken", value)}
-                />
-                <TextInput
-                  label="Refresh Token (opsiyonel)"
-                  type="password"
-                  value={createForm.refreshToken}
-                  onChange={(value) => updateCreateField("refreshToken", value)}
-                />
-                <TextInput
-                  label="Token Bitiş Tarihi (opsiyonel)"
-                  type="datetime-local"
-                  value={createForm.tokenExpiresAt}
-                  onChange={(value) =>
-                    updateCreateField("tokenExpiresAt", value)
-                  }
-                />
+                  <TextInput
+                    label="OAuth2 Access Token"
+                    type="password"
+                    value={createForm.accessToken}
+                    onChange={(value) =>
+                      updateCreateField("accessToken", value)
+                    }
+                  />
+                  <TextInput
+                    label="Refresh Token (opsiyonel)"
+                    type="password"
+                    value={createForm.refreshToken}
+                    onChange={(value) =>
+                      updateCreateField("refreshToken", value)
+                    }
+                  />
+                  <TextInput
+                    label="Token Bitiş Tarihi (opsiyonel)"
+                    type="datetime-local"
+                    value={createForm.tokenExpiresAt}
+                    onChange={(value) =>
+                      updateCreateField("tokenExpiresAt", value)
+                    }
+                  />
+                </div>
+
+                <p className="font-label-sm text-label-sm text-on-surface-variant">
+                  Görsel yükleme için OAuth1 bilgileri:
+                </p>
+
+                <div className="grid grid-cols-1 gap-md md:grid-cols-2">
+                  <TextInput
+                    label="OAuth1 Access Token (opsiyonel)"
+                    type="password"
+                    value={createForm.oauth1AccessToken}
+                    onChange={(value) =>
+                      updateCreateField("oauth1AccessToken", value)
+                    }
+                  />
+                  <TextInput
+                    label="OAuth1 Access Token Secret (opsiyonel)"
+                    type="password"
+                    value={createForm.oauth1AccessTokenSecret}
+                    onChange={(value) =>
+                      updateCreateField("oauth1AccessTokenSecret", value)
+                    }
+                  />
                 </div>
               </div>
             ) : null}
@@ -959,6 +1010,18 @@ export default function AccountsPage() {
                           </dd>
                         </div>
                       ) : null}
+                      {account.platform === "X" ? (
+                        <div className="flex justify-between gap-sm">
+                          <dt className="text-on-surface-variant">
+                            Görsel Yükleme
+                          </dt>
+                          <dd className="font-medium">
+                            {account.hasOAuth1MediaCredentials
+                              ? "OAuth1 hazır"
+                              : "OAuth1 eksik"}
+                          </dd>
+                        </div>
+                      ) : null}
                     </dl>
 
                     {account.lastError ? (
@@ -1076,14 +1139,35 @@ export default function AccountsPage() {
                     }
                   />
                   {reconnectTarget.platform === "X" ? (
-                    <TextInput
-                      label="Yeni Refresh Token (opsiyonel)"
-                      type="password"
-                      value={reconnectForm.refreshToken}
-                      onChange={(value) =>
-                        updateReconnectField("refreshToken", value)
-                      }
-                    />
+                    <>
+                      <TextInput
+                        label="Yeni Refresh Token (opsiyonel)"
+                        type="password"
+                        value={reconnectForm.refreshToken}
+                        onChange={(value) =>
+                          updateReconnectField("refreshToken", value)
+                        }
+                      />
+                      <TextInput
+                        label="OAuth1 Access Token (görsel için opsiyonel)"
+                        type="password"
+                        value={reconnectForm.oauth1AccessToken}
+                        onChange={(value) =>
+                          updateReconnectField("oauth1AccessToken", value)
+                        }
+                      />
+                      <TextInput
+                        label="OAuth1 Access Token Secret (görsel için opsiyonel)"
+                        type="password"
+                        value={reconnectForm.oauth1AccessTokenSecret}
+                        onChange={(value) =>
+                          updateReconnectField(
+                            "oauth1AccessTokenSecret",
+                            value
+                          )
+                        }
+                      />
+                    </>
                   ) : null}
                   <TextInput
                     label="Token Bitiş Tarihi (opsiyonel)"
