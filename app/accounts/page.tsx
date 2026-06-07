@@ -100,6 +100,11 @@ type ReconnectForm = {
   apiKey: string;
 };
 
+type XMediaCredentialsForm = {
+  oauth1AccessToken: string;
+  oauth1AccessTokenSecret: string;
+};
+
 type RequestState = {
   tone: "success" | "error" | "info";
   message: string;
@@ -131,6 +136,11 @@ const emptyReconnectForm: ReconnectForm = {
   oauth1AccessTokenSecret: "",
   refreshToken: "",
   tokenExpiresAt: ""
+};
+
+const emptyXMediaCredentialsForm: XMediaCredentialsForm = {
+  oauth1AccessToken: "",
+  oauth1AccessTokenSecret: ""
 };
 
 const platformMeta: Record<
@@ -257,6 +267,10 @@ export default function AccountsPage() {
   );
   const [reconnectForm, setReconnectForm] =
     useState<ReconnectForm>(emptyReconnectForm);
+  const [xMediaCredentialsTarget, setXMediaCredentialsTarget] =
+    useState<(XAccount & { platform: "X" }) | null>(null);
+  const [xMediaCredentialsForm, setXMediaCredentialsForm] =
+    useState<XMediaCredentialsForm>(emptyXMediaCredentialsForm);
 
   // Field mapping modal state
   const [fieldMappingTarget, setFieldMappingTarget] = useState<string | null>(null);
@@ -415,6 +429,13 @@ export default function AccountsPage() {
 
   function updateReconnectField(key: keyof ReconnectForm, value: string) {
     setReconnectForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateXMediaCredentialsField(
+    key: keyof XMediaCredentialsForm,
+    value: string
+  ) {
+    setXMediaCredentialsForm((current) => ({ ...current, [key]: value }));
   }
 
   function createPayload() {
@@ -620,6 +641,67 @@ export default function AccountsPage() {
   function openReconnect(account: AccountCard) {
     setReconnectTarget(account);
     setReconnectForm(emptyReconnectForm);
+  }
+
+  function openXMediaCredentials(account: XAccount & { platform: "X" }) {
+    setXMediaCredentialsTarget(account);
+    setXMediaCredentialsForm(emptyXMediaCredentialsForm);
+  }
+
+  async function saveXMediaCredentials() {
+    if (!xMediaCredentialsTarget) return;
+
+    const oauth1AccessToken = xMediaCredentialsForm.oauth1AccessToken.trim();
+    const oauth1AccessTokenSecret =
+      xMediaCredentialsForm.oauth1AccessTokenSecret.trim();
+
+    if (!oauth1AccessToken || !oauth1AccessTokenSecret) {
+      setRequestState({
+        tone: "error",
+        message:
+          "OAuth1 Access Token ve OAuth1 Access Token Secret alanları zorunlu."
+      });
+      return;
+    }
+
+    setActionId(`media:X:${xMediaCredentialsTarget.id}`);
+    setRequestState(null);
+
+    try {
+      const response = await fetch(`/api/accounts/x/${xMediaCredentialsTarget.id}`, {
+        body: JSON.stringify({
+          oauth1AccessToken,
+          oauth1AccessTokenSecret
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH"
+      });
+      const payload = await parsePayload<{ data?: unknown }>(response);
+
+      if (!response.ok) {
+        throw new Error(
+          payload.error ?? "X görsel yükleme tokenları kaydedilemedi."
+        );
+      }
+
+      setXMediaCredentialsTarget(null);
+      setXMediaCredentialsForm(emptyXMediaCredentialsForm);
+      setRequestState({
+        tone: "success",
+        message: "X görsel yükleme tokenları kaydedildi."
+      });
+      await loadAccounts();
+    } catch (error) {
+      setRequestState({
+        tone: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "X görsel yükleme tokenları kaydedilemedi."
+      });
+    } finally {
+      setActionId(null);
+    }
   }
 
   async function openFieldMapping(siteId: string) {
@@ -1061,14 +1143,28 @@ export default function AccountsPage() {
                         </button>
                       ) : null}
                       {account.platform === "X" ? (
-                        <button
-                          className="secondary-button flex-1 py-2 font-label-sm text-label-sm disabled:cursor-not-allowed disabled:opacity-60"
-                          disabled={isBusy}
-                          type="button"
-                          onClick={() => runAccountAction(account, "refresh")}
-                        >
-                          Refresh Token
-                        </button>
+                        <>
+                          <button
+                            className="secondary-button flex-1 py-2 font-label-sm text-label-sm disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={isBusy}
+                            type="button"
+                            onClick={() =>
+                              openXMediaCredentials(
+                                account as XAccount & { platform: "X" }
+                              )
+                            }
+                          >
+                            Görsel Tokenları
+                          </button>
+                          <button
+                            className="secondary-button flex-1 py-2 font-label-sm text-label-sm disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={isBusy}
+                            type="button"
+                            onClick={() => runAccountAction(account, "refresh")}
+                          >
+                            Refresh Token
+                          </button>
+                        </>
                       ) : null}
                       <button
                         className="secondary-button flex-1 py-2 font-label-sm text-label-sm"
@@ -1192,6 +1288,86 @@ export default function AccountsPage() {
                   className="primary-button px-md py-sm font-label-md text-label-md"
                   type="button"
                   onClick={saveReconnect}
+                >
+                  Kaydet
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {xMediaCredentialsTarget ? (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-md">
+            <section className="panel-card w-full max-w-lg space-y-md p-md shadow-panel">
+              <div className="flex items-start justify-between gap-md">
+                <div>
+                  <h2 className="font-headline-sm text-headline-sm">
+                    X Görsel Tokenları
+                  </h2>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">
+                    {accountTitle(xMediaCredentialsTarget)} için OAuth 1.0a
+                    medya yükleme bilgilerini girin.
+                  </p>
+                </div>
+                <StatusBadge
+                  tone={
+                    xMediaCredentialsTarget.hasOAuth1MediaCredentials
+                      ? "success"
+                      : "warning"
+                  }
+                >
+                  {xMediaCredentialsTarget.hasOAuth1MediaCredentials
+                    ? "OAuth1 hazır"
+                    : "OAuth1 eksik"}
+                </StatusBadge>
+              </div>
+
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-sm text-blue-900">
+                <p className="font-body-sm text-body-sm">
+                  X Developer Portal&apos;da aynı uygulamanın OAuth 1.0 Keys
+                  bölümündeki Access Token ve Access Token Secret değerlerini
+                  yazın. Consumer Key/Secret bu kutulara yazılmaz.
+                </p>
+              </div>
+
+              <div className="space-y-md">
+                <TextInput
+                  label="OAuth1 Access Token"
+                  type="password"
+                  value={xMediaCredentialsForm.oauth1AccessToken}
+                  onChange={(value) =>
+                    updateXMediaCredentialsField("oauth1AccessToken", value)
+                  }
+                />
+                <TextInput
+                  label="OAuth1 Access Token Secret"
+                  type="password"
+                  value={xMediaCredentialsForm.oauth1AccessTokenSecret}
+                  onChange={(value) =>
+                    updateXMediaCredentialsField(
+                      "oauth1AccessTokenSecret",
+                      value
+                    )
+                  }
+                />
+              </div>
+
+              <div className="flex justify-end gap-sm">
+                <button
+                  className="secondary-button px-md py-sm font-label-md text-label-md"
+                  type="button"
+                  onClick={() => {
+                    setXMediaCredentialsTarget(null);
+                    setXMediaCredentialsForm(emptyXMediaCredentialsForm);
+                  }}
+                >
+                  Vazgeç
+                </button>
+                <button
+                  className="primary-button px-md py-sm font-label-md text-label-md disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={actionId === `media:X:${xMediaCredentialsTarget.id}`}
+                  type="button"
+                  onClick={saveXMediaCredentials}
                 >
                   Kaydet
                 </button>
