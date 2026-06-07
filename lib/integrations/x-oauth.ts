@@ -17,8 +17,8 @@ export const X_OAUTH_SCOPES = [
   "tweet.read",
   "tweet.write",
   "users.read",
-  "media.write",
-  "offline.access"
+  "offline.access",
+  "media.write"
 ].join(" ");
 
 export type XTokenResponse = {

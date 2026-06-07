@@ -61,6 +61,10 @@ describe("X OAuth token verification", () => {
 
 describe("X OAuth scopes", () => {
   it("requests every scope needed for posting, media upload and refresh", () => {
+    expect(X_OAUTH_SCOPES).toBe(
+      "tweet.read tweet.write users.read offline.access media.write"
+    );
+
     const scopes = new Set(X_OAUTH_SCOPES.split(" "));
 
     expect(scopes).toEqual(
