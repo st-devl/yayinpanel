@@ -1,8 +1,8 @@
 /**
  * Bagimsiz scheduler process.
  * Next.js request yasam dongusunun disinda, ayri bir process olarak calisir.
- * Calistirma: node --env-file=.env --import tsx scheduler.ts
- * Dry-run:    node --env-file=.env --import tsx scheduler.ts --dry-run
+ * Calistirma: ./node_modules/.bin/tsx --conditions=react-server scheduler.ts
+ * Dry-run:    ./node_modules/.bin/tsx --conditions=react-server scheduler.ts --dry-run
  */
 import { runSchedulerTick } from "@/lib/server/scheduler-core";
 

@@ -1,6 +1,10 @@
 import { Platform } from "@prisma/client";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import { createXAccount } from "@/lib/server/account-credentials";
+import {
+  createXAccount,
+  getXTokens,
+  updateXTokens
+} from "@/lib/server/account-credentials";
 import { publishCard } from "@/lib/server/publish-runner";
 import { prisma } from "@/lib/server/prisma";
 
@@ -132,5 +136,21 @@ describe("X account references for publishing", () => {
     expect(stored.accountId).toBe(account.xUserId);
     expect(stored.errorCode).toBeNull();
     expect(stored.errorMessage).toBeNull();
+  });
+
+  it("stores OAuth1 media credentials for X media upload", async () => {
+    const account = await createConnectedXAccount();
+
+    await updateXTokens(account.id, {
+      oauth1AccessToken: "oauth1-access-token",
+      oauth1AccessTokenSecret: "oauth1-access-secret"
+    });
+
+    const tokens = await getXTokens(account.xUserId);
+
+    expect(tokens?.oauth1).toEqual({
+      accessToken: "oauth1-access-token",
+      accessTokenSecret: "oauth1-access-secret"
+    });
   });
 });

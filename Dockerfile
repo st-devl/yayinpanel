@@ -67,4 +67,4 @@ COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/scheduler.ts ./scheduler.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
-CMD ["node", "--conditions=react-server", "--import", "tsx", "scheduler.ts"]
+CMD ["./node_modules/.bin/tsx", "--conditions=react-server", "scheduler.ts"]

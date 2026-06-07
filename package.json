@@ -24,8 +24,8 @@
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.mjs",
     "seed:demo": "node --conditions=react-server --env-file=.env --import tsx prisma/demo-seed.ts",
-    "scheduler": "node --conditions=react-server --env-file=.env --import tsx scheduler.ts",
-    "scheduler:dry": "node --conditions=react-server --env-file=.env --import tsx scheduler.ts --dry-run"
+    "scheduler": "./node_modules/.bin/tsx --conditions=react-server scheduler.ts",
+    "scheduler:dry": "./node_modules/.bin/tsx --conditions=react-server scheduler.ts --dry-run"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

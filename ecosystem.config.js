@@ -20,9 +20,8 @@ module.exports = {
     },
     {
       name: "patlat-scheduler",
-      script: "scheduler.ts",
-      interpreter: "node",
-      interpreter_args: "--conditions=react-server --import tsx",
+      script: "./node_modules/.bin/tsx",
+      args: "--conditions=react-server scheduler.ts",
       cwd: __dirname,
       instances: 1,
       autorestart: true,

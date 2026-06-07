@@ -5,6 +5,7 @@ import {
   upsertXAccountFromOAuth,
   xAccountSafeSelect
 } from "@/lib/server/account-credentials";
+import { getEnv } from "@/lib/server/env";
 import { prisma } from "@/lib/server/prisma";
 
 const createSchema = z.object({
@@ -25,6 +26,9 @@ const createSchema = z.object({
 export async function GET() {
   const auth = await requireApiUser();
   if (auth.response) return auth.response;
+  const env = getEnv();
+  const consumerKeySet = Boolean(env.X_API_KEY);
+  const consumerSecretSet = Boolean(env.X_API_SECRET);
 
   const accounts = await prisma.xAccount.findMany({
     orderBy: { createdAt: "desc" },
@@ -36,6 +40,11 @@ export async function GET() {
   });
 
   return NextResponse.json({
+    xApiCredentials: {
+      configured: consumerKeySet && consumerSecretSet,
+      consumerKeySet,
+      consumerSecretSet
+    },
     data: accounts.map(
       ({
         oauth1AccessTokenEncrypted,

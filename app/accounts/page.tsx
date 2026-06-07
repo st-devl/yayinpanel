@@ -105,6 +105,12 @@ type XMediaCredentialsForm = {
   oauth1AccessTokenSecret: string;
 };
 
+type XApiCredentialsStatus = {
+  configured: boolean;
+  consumerKeySet: boolean;
+  consumerSecretSet: boolean;
+};
+
 type RequestState = {
   tone: "success" | "error" | "info";
   message: string;
@@ -141,6 +147,12 @@ const emptyReconnectForm: ReconnectForm = {
 const emptyXMediaCredentialsForm: XMediaCredentialsForm = {
   oauth1AccessToken: "",
   oauth1AccessTokenSecret: ""
+};
+
+const emptyXApiCredentialsStatus: XApiCredentialsStatus = {
+  configured: false,
+  consumerKeySet: false,
+  consumerSecretSet: false
 };
 
 const platformMeta: Record<
@@ -248,6 +260,21 @@ function accountIdentifier(account: AccountCard) {
   return account.baseUrl;
 }
 
+function xMediaCredentialLabel(
+  account: XAccount & { platform?: "X" },
+  xApiCredentials: XApiCredentialsStatus
+) {
+  if (!account.hasOAuth1MediaCredentials) {
+    return "OAuth1 eksik";
+  }
+
+  if (!xApiCredentials.configured) {
+    return "App anahtarı eksik";
+  }
+
+  return "Hazır";
+}
+
 async function parsePayload<T>(response: Response) {
   return (await response.json().catch(() => ({}))) as T & {
     error?: string;
@@ -271,6 +298,8 @@ export default function AccountsPage() {
     useState<(XAccount & { platform: "X" }) | null>(null);
   const [xMediaCredentialsForm, setXMediaCredentialsForm] =
     useState<XMediaCredentialsForm>(emptyXMediaCredentialsForm);
+  const [xApiCredentials, setXApiCredentials] =
+    useState<XApiCredentialsStatus>(emptyXApiCredentialsStatus);
 
   // Field mapping modal state
   const [fieldMappingTarget, setFieldMappingTarget] = useState<string | null>(null);
@@ -380,7 +409,10 @@ export default function AccountsPage() {
     const [instagramPayload, xPayload, wordpressPayload, customSitePayload] =
       await Promise.all([
         parsePayload<{ data?: InstagramAccount[] }>(instagramResponse),
-        parsePayload<{ data?: XAccount[] }>(xResponse),
+        parsePayload<{
+          data?: XAccount[];
+          xApiCredentials?: XApiCredentialsStatus;
+        }>(xResponse),
         parsePayload<{ data?: WordPressSite[] }>(wordpressResponse),
         parsePayload<{ data?: CustomSite[] }>(customSiteResponse)
       ]);
@@ -420,6 +452,9 @@ export default function AccountsPage() {
         platform: "CUSTOM_SITE" as const
       })) satisfies AccountCard[])
     ]);
+    setXApiCredentials(
+      xPayload.xApiCredentials ?? emptyXApiCredentialsStatus
+    );
     setLoading(false);
   }
 
@@ -687,8 +722,10 @@ export default function AccountsPage() {
       setXMediaCredentialsTarget(null);
       setXMediaCredentialsForm(emptyXMediaCredentialsForm);
       setRequestState({
-        tone: "success",
-        message: "X görsel yükleme tokenları kaydedildi."
+        tone: xApiCredentials.configured ? "success" : "info",
+        message: xApiCredentials.configured
+          ? "X görsel yükleme tokenları kaydedildi."
+          : "X görsel yükleme tokenları kaydedildi; ancak sunucuda X_API_KEY / X_API_SECRET eksik olduğu için görsel yükleme henüz çalışmaz."
       });
       await loadAccounts();
     } catch (error) {
@@ -1098,9 +1135,7 @@ export default function AccountsPage() {
                             Görsel Yükleme
                           </dt>
                           <dd className="font-medium">
-                            {account.hasOAuth1MediaCredentials
-                              ? "OAuth1 hazır"
-                              : "OAuth1 eksik"}
+                            {xMediaCredentialLabel(account, xApiCredentials)}
                           </dd>
                         </div>
                       ) : null}
@@ -1311,14 +1346,16 @@ export default function AccountsPage() {
                 </div>
                 <StatusBadge
                   tone={
-                    xMediaCredentialsTarget.hasOAuth1MediaCredentials
+                    xMediaCredentialsTarget.hasOAuth1MediaCredentials &&
+                    xApiCredentials.configured
                       ? "success"
                       : "warning"
                   }
                 >
-                  {xMediaCredentialsTarget.hasOAuth1MediaCredentials
-                    ? "OAuth1 hazır"
-                    : "OAuth1 eksik"}
+                  {xMediaCredentialLabel(
+                    xMediaCredentialsTarget,
+                    xApiCredentials
+                  )}
                 </StatusBadge>
               </div>
 
@@ -1329,6 +1366,16 @@ export default function AccountsPage() {
                   yazın. Consumer Key/Secret bu kutulara yazılmaz.
                 </p>
               </div>
+
+              {!xApiCredentials.configured ? (
+                <div className="rounded-lg border border-error/20 bg-error-container/20 p-sm text-on-error-container">
+                  <p className="font-body-sm text-body-sm">
+                    Sunucuda X_API_KEY / X_API_SECRET eksik. Bu kutular
+                    kaydedilse bile Consumer Key ve Consumer Key Secret .env
+                    tarafına eklenmeden görsel yükleme çalışmaz.
+                  </p>
+                </div>
+              ) : null}
 
               <div className="space-y-md">
                 <TextInput
