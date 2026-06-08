@@ -14,19 +14,22 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   }
 
   const { id } = await context.params;
-  const result = await deleteStoredMedia(id);
+  let result: Awaited<ReturnType<typeof deleteStoredMedia>>;
+
+  try {
+    result = await deleteStoredMedia(id);
+  } catch (error) {
+    console.error("Media delete failed", error);
+    return NextResponse.json(
+      { error: "Medya silinirken sunucu hatasi olustu." },
+      { status: 500 }
+    );
+  }
 
   if (result.reason === "not_found") {
     return NextResponse.json(
       { error: "Media file not found" },
       { status: 404 }
-    );
-  }
-
-  if (result.reason === "in_use") {
-    return NextResponse.json(
-      { error: "Media file is used by existing content cards" },
-      { status: 409 }
     );
   }
 

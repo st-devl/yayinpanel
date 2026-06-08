@@ -12,6 +12,7 @@ type ViewMode = "grid" | "list";
 type MediaFile = {
   id: string;
   fileName: string;
+  fileAvailable: boolean;
   originalFileName: string;
   mimeType: string;
   fileSize: number;
@@ -58,6 +59,13 @@ function dimensions(media: MediaFile) {
 }
 
 function mediaStatus(media: MediaFile) {
+  if (!media.fileAvailable) {
+    return {
+      label: "Dosya eksik",
+      tone: "error" as const
+    };
+  }
+
   if (media.usedByContentCards > 0) {
     return {
       label: `${media.usedByContentCards} içerikte`,
@@ -66,6 +74,17 @@ function mediaStatus(media: MediaFile) {
   }
 
   return { label: "Boşta", tone: "neutral" as const };
+}
+
+function MissingMediaPreview({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-error-container text-error">
+      <MaterialIcon name="broken_image" size={compact ? 20 : 36} />
+      {!compact ? (
+        <span className="font-label-sm text-label-sm">Dosya eksik</span>
+      ) : null}
+    </div>
+  );
 }
 
 export default function MediaPage() {
@@ -236,15 +255,12 @@ export default function MediaPage() {
   }
 
   async function deleteMedia(media: MediaFile) {
-    if (media.usedByContentCards > 0) {
-      setRequestState({
-        tone: "info",
-        message: "Bu medya içerik kartlarında kullanıldığı için silinemez."
-      });
-      return;
-    }
+    const usedWarning =
+      media.usedByContentCards > 0
+        ? `\n\nBu medya ${media.usedByContentCards} içerik kartında kullanılıyor. Silerseniz o kartlardan görsel bağlantısı kaldırılır.`
+        : "";
 
-    if (!window.confirm(`${media.originalFileName} silinsin mi?`)) {
+    if (!window.confirm(`${media.originalFileName} silinsin mi?${usedWarning}`)) {
       return;
     }
 
@@ -479,7 +495,6 @@ export default function MediaPage() {
           <section className="grid grid-cols-1 gap-md sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {mediaFiles.map((media, index) => {
               const status = mediaStatus(media);
-              const isUsed = media.usedByContentCards > 0;
 
               return (
                 <article
@@ -487,15 +502,19 @@ export default function MediaPage() {
                   className="group relative overflow-hidden rounded-xl border border-outline-variant bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-panel-sm"
                 >
                   <div className="relative aspect-square overflow-hidden bg-surface-container">
-                    <Image
-                      src={`/api/media/${media.id}/file`}
-                      alt={media.originalFileName}
-                      fill
-                      unoptimized
-                      loading={index === 0 ? "eager" : "lazy"}
-                      sizes="(min-width: 1536px) 20vw, (min-width: 1280px) 25vw, (min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
+                    {media.fileAvailable ? (
+                      <Image
+                        src={`/api/media/${media.id}/file`}
+                        alt={media.originalFileName}
+                        fill
+                        unoptimized
+                        loading={index === 0 ? "eager" : "lazy"}
+                        sizes="(min-width: 1536px) 20vw, (min-width: 1280px) 25vw, (min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <MissingMediaPreview />
+                    )}
                     <div className="absolute left-2 top-2">
                       <StatusBadge tone={status.tone}>
                         {status.label}
@@ -523,13 +542,8 @@ export default function MediaPage() {
                       </span>
                       <button
                         className="rounded p-1 text-error transition-colors hover:bg-error-container disabled:cursor-not-allowed disabled:opacity-40"
-                        disabled={isUsed}
                         type="button"
-                        title={
-                          isUsed
-                            ? "Kullanımdaki medya silinemez"
-                            : "Medya dosyasını sil"
-                        }
+                        title="Medya dosyasını sil"
                         aria-label={`${media.originalFileName} sil`}
                         onClick={() => deleteMedia(media)}
                       >
@@ -572,7 +586,6 @@ export default function MediaPage() {
                 <tbody>
                   {mediaFiles.map((media) => {
                     const status = mediaStatus(media);
-                    const isUsed = media.usedByContentCards > 0;
 
                     return (
                       <tr
@@ -582,14 +595,18 @@ export default function MediaPage() {
                         <td className="px-md py-sm">
                           <div className="flex min-w-0 items-center gap-sm">
                             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-container">
-                              <Image
-                                src={`/api/media/${media.id}/file`}
-                                alt={media.originalFileName}
-                                fill
-                                unoptimized
-                                sizes="48px"
-                                className="object-cover"
-                              />
+                              {media.fileAvailable ? (
+                                <Image
+                                  src={`/api/media/${media.id}/file`}
+                                  alt={media.originalFileName}
+                                  fill
+                                  unoptimized
+                                  sizes="48px"
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <MissingMediaPreview compact />
+                              )}
                             </div>
                             <div className="min-w-0">
                               <p
@@ -621,13 +638,8 @@ export default function MediaPage() {
                         <td className="px-md py-sm text-right">
                           <button
                             className="rounded p-2 text-error transition-colors hover:bg-error-container disabled:cursor-not-allowed disabled:opacity-40"
-                            disabled={isUsed}
                             type="button"
-                            title={
-                              isUsed
-                                ? "Kullanımdaki medya silinemez"
-                                : "Medya dosyasını sil"
-                            }
+                            title="Medya dosyasını sil"
                             aria-label={`${media.originalFileName} sil`}
                             onClick={() => deleteMedia(media)}
                           >

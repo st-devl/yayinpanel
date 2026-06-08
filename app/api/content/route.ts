@@ -10,6 +10,7 @@ import {
 } from "@/lib/server/content-cards";
 import { resolveStableXAccountId } from "@/lib/server/account-credentials";
 import { getSetting } from "@/lib/server/settings";
+import { isStoredMediaAvailable } from "@/lib/server/media-storage";
 import { prisma } from "@/lib/server/prisma";
 import { buildBulkSchedule, type ScheduleFrequency } from "@/lib/timezone";
 
@@ -34,11 +35,23 @@ const bulkSchema = z.object({
   saveAsDraft: z.boolean().optional()
 });
 
-function serializeCard<T extends { scheduledAt: Date | null; createdAt: Date }>(
-  card: T
-) {
+async function serializeCard<
+  T extends {
+    createdAt: Date;
+    mediaFile?: { storagePath: string } | null;
+    scheduledAt: Date | null;
+  }
+>(card: T) {
+  const mediaFile = card.mediaFile
+    ? {
+        ...card.mediaFile,
+        fileAvailable: await isStoredMediaAvailable(card.mediaFile)
+      }
+    : card.mediaFile;
+
   return {
     ...card,
+    mediaFile,
     scheduledAt: card.scheduledAt?.toISOString() ?? null,
     createdAt: card.createdAt.toISOString()
   };
@@ -66,7 +79,7 @@ export async function GET(request: NextRequest) {
       : undefined
   });
 
-  return NextResponse.json({ data: cards.map(serializeCard) });
+  return NextResponse.json({ data: await Promise.all(cards.map(serializeCard)) });
 }
 
 /** Toplu kart olusturma: panel akislari icin ortak depoya yazar. */
@@ -147,7 +160,7 @@ export async function POST(request: NextRequest) {
   const created = await createContentCardsBulk(inputs);
 
   return NextResponse.json(
-    { data: created.map(serializeCard), count: created.length },
+    { data: await Promise.all(created.map(serializeCard)), count: created.length },
     { status: 201 }
   );
 }

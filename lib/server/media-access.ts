@@ -1,10 +1,10 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "crypto";
-import { getEnv } from "@/lib/server/env";
+import { getAppBaseUrl, getEncryptionKeyHex } from "@/lib/server/env";
 
 function createMediaAccessToken(mediaId: string, expiresAt: number) {
-  const secret = Buffer.from(getEnv().ENCRYPTION_KEY, "hex");
+  const secret = Buffer.from(getEncryptionKeyHex(), "hex");
   const payload = `${mediaId}.${expiresAt}`;
   const signature = createHmac("sha256", secret)
     .update(payload)
@@ -48,7 +48,7 @@ export function createSignedMediaFileUrl(
   expiresInSeconds = 600
 ) {
   const expiresAt = Math.floor(Date.now() / 1000) + expiresInSeconds;
-  const url = new URL(`/api/media/${mediaId}/file`, getEnv().APP_BASE_URL);
+  const url = new URL(`/api/media/${mediaId}/file`, getAppBaseUrl());
 
   url.searchParams.set("token", createMediaAccessToken(mediaId, expiresAt));
 

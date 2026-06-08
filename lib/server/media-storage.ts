@@ -1,11 +1,11 @@
 import "server-only";
 
 import { randomUUID } from "crypto";
-import { mkdir, readFile, unlink, writeFile } from "fs/promises";
+import { access, mkdir, readFile, unlink, writeFile } from "fs/promises";
 import path from "path";
 import sharp from "sharp";
 import { prisma } from "@/lib/server/prisma";
-import { getEnv } from "@/lib/server/env";
+import { getStorageDir } from "@/lib/server/env";
 
 const maxImageFileSize = 20 * 1024 * 1024;
 const minAspectRatio = 0.25;
@@ -40,7 +40,7 @@ export type StoreUploadedMediaInput = {
 function getStorageRoot() {
   return path.resolve(
     /*turbopackIgnore: true*/ process.cwd(),
-    getEnv().STORAGE_DIR
+    getStorageDir()
   );
 }
 
@@ -155,8 +155,21 @@ export async function readMediaBinary(mediaId: string) {
     return null;
   }
 
+  const absolutePath = resolveStoragePath(media.storagePath);
+  let buffer: Buffer;
+
+  try {
+    buffer = await readFile(absolutePath);
+  } catch (error) {
+    if (isMissingFileError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+
   return {
-    buffer: await readFile(resolveStoragePath(media.storagePath)),
+    buffer,
     fileName: media.originalFileName,
     fileSize: media.fileSize,
     mimeType: media.mimeType,
@@ -168,26 +181,34 @@ export async function getMediaFileForWordPressUpload(mediaId: string) {
   return readMediaBinary(mediaId);
 }
 
+export async function isStoredMediaAvailable(media: { storagePath: string }) {
+  try {
+    await access(resolveStoragePath(media.storagePath));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function deleteStoredMedia(mediaId: string) {
   const media = await prisma.mediaFile.findUnique({
-    where: { id: mediaId },
-    include: {
-      _count: {
-        select: { contentCards: true }
-      }
-    }
+    where: { id: mediaId }
   });
 
   if (!media) {
     return { deleted: false, reason: "not_found" as const };
   }
 
-  if (media._count.contentCards > 0) {
-    return { deleted: false, reason: "in_use" as const };
-  }
-
   await prisma.mediaFile.delete({ where: { id: mediaId } });
   await unlink(resolveStoragePath(media.storagePath)).catch(() => undefined);
 
   return { deleted: true, reason: null };
+}
+
+function isMissingFileError(error: unknown) {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    (error as NodeJS.ErrnoException).code === "ENOENT"
+  );
 }

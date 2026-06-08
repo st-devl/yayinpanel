@@ -19,6 +19,7 @@ type ContentStatus =
   | "MANUAL_CHECK_REQUIRED";
 
 type MediaFile = {
+  fileAvailable: boolean;
   id: string;
   originalFileName: string;
 };
@@ -130,6 +131,15 @@ function cardDescription(card: ContentCard) {
   }
 
   return card.text || "Metin içeriği yok.";
+}
+
+function MissingMediaPreview() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-base bg-error-container text-error">
+      <MaterialIcon name="broken_image" size={48} />
+      <span className="font-label-md text-label-md">Görsel dosyası eksik</span>
+    </div>
+  );
 }
 
 export default function ContentPage() {
@@ -577,6 +587,9 @@ export default function ContentPage() {
             const description = cardDescription(card);
             const isMuted = card.status === "CANCELED";
             const hasError = card.status === "FAILED";
+            const mediaFileAvailable =
+              Boolean(card.mediaFileId && card.mediaFile) &&
+              card.mediaFile?.fileAvailable !== false;
 
             return (
               <article
@@ -588,7 +601,7 @@ export default function ContentPage() {
                 } ${isMuted ? "opacity-70 grayscale hover:grayscale-0" : ""}`}
               >
                 <div className="relative h-48 overflow-hidden bg-surface-container-low">
-                  {card.mediaFileId ? (
+                  {mediaFileAvailable ? (
                     <Image
                       src={`/api/media/${card.mediaFileId}/file`}
                       alt={card.mediaFile?.originalFileName ?? title}
@@ -598,6 +611,8 @@ export default function ContentPage() {
                       sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
                       className="object-cover"
                     />
+                  ) : card.mediaFileId ? (
+                    <MissingMediaPreview />
                   ) : (
                     <div className="flex h-full flex-col items-center justify-center gap-base text-on-surface-variant">
                       <MaterialIcon name="article" size={48} />

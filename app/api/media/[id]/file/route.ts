@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     );
   }
 
-  return new NextResponse(media.buffer, {
+  return new NextResponse(new Uint8Array(media.buffer), {
     headers: {
       "Cache-Control": token ? "public, max-age=60" : "private, max-age=60",
       "Content-Disposition": `inline; filename="${media.fileName.replaceAll('"', "")}"`,

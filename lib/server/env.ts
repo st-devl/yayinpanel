@@ -80,6 +80,10 @@ export function getAppBaseUrl() {
   return parsed.data;
 }
 
+export function getStorageDir() {
+  return process.env.STORAGE_DIR?.trim() || "storage";
+}
+
 function formatEnvIssue(issue: z.ZodIssue) {
   const key = issue.path[0]?.toString() as keyof AppEnv | undefined;
   const label = key ?? "ENV";

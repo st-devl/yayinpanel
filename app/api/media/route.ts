@@ -1,21 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/server/api-auth";
 import {
+  isStoredMediaAvailable,
   MediaValidationError,
   storeUploadedMedia
 } from "@/lib/server/media-storage";
 import { prisma } from "@/lib/server/prisma";
 
-function serializeMediaFile<
+async function serializeMediaFile<
   T extends {
     _count?: { contentCards: number };
     createdAt: Date;
+    storagePath: string;
     updatedAt: Date;
   }
 >(media: T) {
   return {
     ...media,
     createdAt: media.createdAt.toISOString(),
+    fileAvailable: await isStoredMediaAvailable(media),
     updatedAt: media.updatedAt.toISOString(),
     usedByContentCards: media._count?.contentCards ?? 0,
     _count: undefined
@@ -49,7 +52,7 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json({
-    data: mediaFiles.map(serializeMediaFile)
+    data: await Promise.all(mediaFiles.map(serializeMediaFile))
   });
 }
 
@@ -78,7 +81,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { data: serializeMediaFile(media) },
+      { data: await serializeMediaFile(media) },
       { status: 201 }
     );
   } catch (error) {
