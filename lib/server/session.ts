@@ -6,14 +6,13 @@ import {
   SESSION_TTL_SECONDS,
   verifySessionToken
 } from "@/lib/auth/session-token";
-import { getEnv } from "@/lib/server/env";
+import { getEncryptionKeyHex } from "@/lib/server/env";
 import { prisma } from "@/lib/server/prisma";
 
 export async function setSessionCookie(user: { id: string; email: string }) {
-  const env = getEnv();
   const token = await createSessionToken(
     { sub: user.id, email: user.email },
-    env.ENCRYPTION_KEY
+    getEncryptionKeyHex()
   );
   const cookieStore = await cookies();
 
@@ -32,10 +31,9 @@ export async function clearSessionCookie() {
 }
 
 export async function getCurrentUser() {
-  const env = getEnv();
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const session = await verifySessionToken(token, env.ENCRYPTION_KEY);
+  const session = await verifySessionToken(token, getEncryptionKeyHex());
 
   if (!session) {
     return null;

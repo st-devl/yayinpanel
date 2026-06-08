@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { MaterialIcon } from "@/components/material-icon";
 import { loginAction, type LoginActionState } from "@/app/login/actions";
@@ -25,6 +26,13 @@ function SubmitButton() {
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [state, formAction] = useActionState(loginAction, initialState);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.success) {
+      router.replace("/dashboard");
+    }
+  }, [router, state.success]);
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-surface p-md text-on-surface">

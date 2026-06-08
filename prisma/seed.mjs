@@ -1,33 +1,28 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { z } from "zod";
 
 const prisma = new PrismaClient();
-
-const requiredEnv = ["ADMIN_EMAIL", "ADMIN_PASSWORD", "TIMEZONE"];
-
-function assertEnv() {
-  for (const key of requiredEnv) {
-    if (!process.env[key]) {
-      throw new Error(`${key} is required for seed`);
-    }
-  }
-
-  if (process.env.ADMIN_PASSWORD.length < 12) {
-    throw new Error("ADMIN_PASSWORD must be at least 12 characters");
-  }
-}
+const DEFAULT_TIMEZONE = "Europe/Istanbul";
+const bootstrapEnvSchema = z.object({
+  ADMIN_EMAIL: z.string().email(),
+  ADMIN_PASSWORD: z.string().min(12)
+});
 
 async function main() {
-  assertEnv();
-
   const existingUser = await prisma.user.findFirst();
+  const timezone = process.env.TIMEZONE || DEFAULT_TIMEZONE;
 
   if (!existingUser) {
-    const passwordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12);
+    const bootstrapEnv = bootstrapEnvSchema.parse({
+      ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+      ADMIN_PASSWORD: process.env.ADMIN_PASSWORD
+    });
+    const passwordHash = await bcrypt.hash(bootstrapEnv.ADMIN_PASSWORD, 12);
 
     await prisma.user.create({
       data: {
-        email: process.env.ADMIN_EMAIL,
+        email: bootstrapEnv.ADMIN_EMAIL,
         passwordHash
       }
     });
@@ -35,8 +30,8 @@ async function main() {
 
   await prisma.setting.upsert({
     where: { key: "TIMEZONE" },
-    update: { value: process.env.TIMEZONE },
-    create: { key: "TIMEZONE", value: process.env.TIMEZONE }
+    update: { value: timezone },
+    create: { key: "TIMEZONE", value: timezone }
   });
 
   await prisma.setting.upsert({

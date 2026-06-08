@@ -5,8 +5,8 @@ const envSchema = z.object({
   APP_BASE_URL: z.string().url(),
   STORAGE_DIR: z.string().min(1).default("storage"),
   TIMEZONE: z.string().default("Europe/Istanbul"),
-  ADMIN_EMAIL: z.string().email(),
-  ADMIN_PASSWORD: z.string().min(12),
+  ADMIN_EMAIL: z.string().email().or(z.literal("")).default(""),
+  ADMIN_PASSWORD: z.string().min(12).or(z.literal("")).default(""),
   ENCRYPTION_KEY: z
     .string()
     .regex(/^[a-fA-F0-9]{64}$/, "ENCRYPTION_KEY must be 32 bytes hex"),
@@ -23,14 +23,18 @@ const envSchema = z.object({
 
 export type AppEnv = z.infer<typeof envSchema>;
 
+const ENCRYPTION_KEY_PATTERN = /^[a-fA-F0-9]{64}$/;
+
 const envHints: Record<keyof AppEnv, string> = {
   DATABASE_URL: "Set DATABASE_URL to the Prisma datasource URL.",
   APP_BASE_URL: "Set APP_BASE_URL to the public URL of the app.",
   STORAGE_DIR: "Set STORAGE_DIR to the local media storage directory.",
   TIMEZONE:
     "Set TIMEZONE to a valid IANA timezone, for example Europe/Istanbul.",
-  ADMIN_EMAIL: "Set ADMIN_EMAIL to the initial admin email address.",
-  ADMIN_PASSWORD: "Set ADMIN_PASSWORD to a strong initial admin password.",
+  ADMIN_EMAIL:
+    "Set ADMIN_EMAIL for first-run admin bootstrap, or leave it empty after the first user exists.",
+  ADMIN_PASSWORD:
+    "Set ADMIN_PASSWORD for first-run admin bootstrap, or leave it empty after the first user exists.",
   ENCRYPTION_KEY:
     "Set ENCRYPTION_KEY to a 64-character hex value and keep it backed up.",
   META_APP_ID: "Set META_APP_ID when Instagram integration is enabled.",
@@ -52,6 +56,18 @@ export class EnvValidationError extends Error {
     super(`Environment configuration is invalid:\n${issues.join("\n")}`);
     this.name = "EnvValidationError";
   }
+}
+
+export function getEncryptionKeyHex() {
+  const value = process.env.ENCRYPTION_KEY;
+
+  if (!value || !ENCRYPTION_KEY_PATTERN.test(value)) {
+    throw new Error(
+      "ENCRYPTION_KEY must be a 64-character hex value and is required for session and secret encryption."
+    );
+  }
+
+  return value;
 }
 
 function formatEnvIssue(issue: z.ZodIssue) {

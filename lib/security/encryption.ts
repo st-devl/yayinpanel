@@ -1,11 +1,11 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
-import { getEnv } from "@/lib/server/env";
+import { getEncryptionKeyHex } from "@/lib/server/env";
 
 const algorithm = "aes-256-gcm";
 const ivLength = 12;
 
 function getKey() {
-  return Buffer.from(getEnv().ENCRYPTION_KEY, "hex");
+  return Buffer.from(getEncryptionKeyHex(), "hex");
 }
 
 export function encryptSecret(value: string): string {
