@@ -5,8 +5,10 @@ const envSchema = z.object({
   APP_BASE_URL: z.string().url(),
   STORAGE_DIR: z.string().min(1).default("storage"),
   TIMEZONE: z.string().default("Europe/Istanbul"),
-  ADMIN_EMAIL: z.string().email().or(z.literal("")).default(""),
-  ADMIN_PASSWORD: z.string().min(12).or(z.literal("")).default(""),
+  // Bootstrap credentials: format dogrulamasi olmadan kabul edilir;
+  // ilk kullanici olusturulduktan sonra deger onemli degildir.
+  ADMIN_EMAIL: z.string().default(""),
+  ADMIN_PASSWORD: z.string().default(""),
   ENCRYPTION_KEY: z
     .string()
     .regex(/^[a-fA-F0-9]{64}$/, "ENCRYPTION_KEY must be 32 bytes hex"),
