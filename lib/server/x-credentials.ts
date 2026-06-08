@@ -35,9 +35,17 @@ export async function getXOAuthCredentials(): Promise<XOAuthCredentials> {
     byKey.get(CLIENT_ID_KEY)?.trim() || readEnvCredential("X_CLIENT_ID");
 
   const encryptedSecret = byKey.get(CLIENT_SECRET_KEY);
-  const clientSecret = encryptedSecret
-    ? decryptSecret(encryptedSecret)
-    : readEnvCredential("X_CLIENT_SECRET");
+  let clientSecret: string;
+  if (encryptedSecret) {
+    try {
+      clientSecret = decryptSecret(encryptedSecret);
+    } catch {
+      // DB'deki secret eski key ile sifrelenmis; env'deki degere don.
+      clientSecret = readEnvCredential("X_CLIENT_SECRET");
+    }
+  } else {
+    clientSecret = readEnvCredential("X_CLIENT_SECRET");
+  }
 
   return { clientId: clean(clientId), clientSecret: clean(clientSecret) };
 }
