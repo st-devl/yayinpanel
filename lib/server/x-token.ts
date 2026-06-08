@@ -161,12 +161,18 @@ export async function refreshDueXTokens(
   now: Date = new Date()
 ): Promise<number> {
   const threshold = new Date(now.getTime() + EXPIRY_SKEW_MS);
+  // expires_in dönmeyen X uygulamalarında tokenExpiresAt null kalır; bu hesaplar
+  // için updatedAt üzerinden 90 dk. geçmişse yenileme tetiklenir.
+  const nullExpiryThreshold = new Date(now.getTime() - 90 * 60 * 1000);
   const due = await prisma.xAccount.findMany({
     where: {
       connectionStatus: {
         in: [ConnectionStatus.CONNECTED, ConnectionStatus.TOKEN_EXPIRED]
       },
-      tokenExpiresAt: { not: null, lte: threshold }
+      OR: [
+        { tokenExpiresAt: { not: null, lte: threshold } },
+        { tokenExpiresAt: null, updatedAt: { lte: nullExpiryThreshold } }
+      ]
     },
     select: { xUserId: true }
   });

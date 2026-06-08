@@ -158,12 +158,16 @@ function parseTokenResponse(json: unknown): XTokenResponse {
     throw permanentError("X_TOKEN_NO_ACCESS", "X access token alinamadi");
   }
 
+  // X OAuth2 tokenları varsayılan 2 saat (7200s) geçerlidir; bazı uygulama
+  // konfigürasyonlarında expires_in dönmeyebilir. Bu durumda 90 dakika
+  // konservatif default atanır — scheduler proaktif yenilemede bu değeri kullanır.
+  const DEFAULT_EXPIRY_MS = 90 * 60 * 1000;
   return {
     accessToken: body.access_token,
     refreshToken: body.refresh_token ?? null,
     expiresAt: body.expires_in
       ? new Date(Date.now() + body.expires_in * 1000)
-      : null
+      : new Date(Date.now() + DEFAULT_EXPIRY_MS)
   };
 }
 
