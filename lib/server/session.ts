@@ -9,20 +9,37 @@ import {
 import { getEncryptionKeyHex } from "@/lib/server/env";
 import { prisma } from "@/lib/server/prisma";
 
-export async function setSessionCookie(user: { id: string; email: string }) {
+function sessionCookieOptions() {
+  return {
+    httpOnly: true,
+    maxAge: SESSION_TTL_SECONDS,
+    path: "/",
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production"
+  };
+}
+
+export async function createSessionCookie(user: { id: string; email: string }) {
   const token = await createSessionToken(
     { sub: user.id, email: user.email },
     getEncryptionKeyHex()
   );
-  const cookieStore = await cookies();
 
-  cookieStore.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    maxAge: SESSION_TTL_SECONDS,
-    path: "/",
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production"
-  });
+  return {
+    name: SESSION_COOKIE_NAME,
+    value: token,
+    options: sessionCookieOptions()
+  };
+}
+
+export async function setSessionCookie(user: { id: string; email: string }) {
+  const sessionCookie = await createSessionCookie(user);
+  const cookieStore = await cookies();
+  cookieStore.set(
+    sessionCookie.name,
+    sessionCookie.value,
+    sessionCookie.options
+  );
 }
 
 export async function clearSessionCookie() {

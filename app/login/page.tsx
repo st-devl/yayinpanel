@@ -1,16 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormStatus } from "react-dom";
 import { MaterialIcon } from "@/components/material-icon";
-import { loginAction, type LoginActionState } from "@/app/login/actions";
 
-const initialState: LoginActionState = {};
+type LoginResponse = {
+  ok?: boolean;
+  error?: string;
+};
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
+function SubmitButton({ pending }: { pending: boolean }) {
   return (
     <button
       className="primary-button mt-2 w-full rounded-lg py-4 font-label-md text-label-md shadow-md disabled:cursor-not-allowed disabled:opacity-70"
@@ -25,14 +24,46 @@ function SubmitButton() {
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [state, formAction] = useActionState(loginAction, initialState);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    if (state.success) {
-      router.replace("/dashboard");
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (pending) {
+      return;
     }
-  }, [router, state.success]);
+
+    setError(null);
+    setPending(true);
+
+    const formData = new FormData(event.currentTarget);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        body: JSON.stringify({
+          email: formData.get("email"),
+          password: formData.get("password")
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST"
+      });
+      const payload = (await response.json().catch(() => ({}))) as LoginResponse;
+
+      if (!response.ok || !payload.ok) {
+        setError(payload.error ?? "Giriş başarısız.");
+        return;
+      }
+
+      router.replace("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Giriş sırasında sunucuya ulaşılamadı.");
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-surface p-md text-on-surface">
@@ -67,14 +98,14 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {state.error ? (
+            {error ? (
               <div className="flex items-center gap-sm rounded-lg border border-error/20 bg-error-container p-sm text-on-error-container">
                 <MaterialIcon name="error" size={20} />
-                <p className="font-label-md text-label-md">{state.error}</p>
+                <p className="font-label-md text-label-md">{error}</p>
               </div>
             ) : null}
 
-            <form className="flex flex-col gap-md" action={formAction}>
+            <form className="flex flex-col gap-md" onSubmit={handleSubmit}>
               <label className="flex flex-col gap-xs">
                 <span className="ml-1 font-label-md text-label-md text-on-surface-variant">
                   E-posta
@@ -125,7 +156,7 @@ export default function LoginPage() {
                 </span>
               </label>
 
-              <SubmitButton />
+              <SubmitButton pending={pending} />
             </form>
           </div>
         </section>
