@@ -84,7 +84,15 @@ export class XPublisher implements Publisher {
     const result = await readJsonResponse(response);
 
     if (!result.ok) {
-      if (isXPermissionFailure(result.status, result.json)) {
+      // OAuth2 (Bearer) ile v2 medya yukleme auth/izin hatasi donerse (401
+      // "Unauthorized" veya 403), bu hesap/uygulama icin OAuth2 medya yukleme
+      // kullanilamiyor demektir; OAuth1 v1.1 fallback'ine gec. v2 medya ucu pek
+      // cok uygulama icin 401 dondurur, bu nedenle 403 ile birlikte 401'i de
+      // fallback sinyali sayiyoruz.
+      if (
+        result.status === 401 ||
+        isXPermissionFailure(result.status, result.json)
+      ) {
         return this.uploadMediaWithOAuth1Fallback(
           credentials,
           media,

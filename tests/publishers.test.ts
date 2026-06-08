@@ -202,6 +202,95 @@ describe("XPublisher (mock API)", () => {
     });
   });
 
+  it("falls back to OAuth1 v1.1 media upload when OAuth2 media upload returns 401 Unauthorized", async () => {
+    vi.stubEnv("X_API_KEY", "api-key");
+    vi.stubEnv("X_API_SECRET", "api-secret");
+
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (url, init) => {
+        const href = String(url);
+
+        if (href === "https://api.x.com/2/media/upload") {
+          // X v2 medya ucu pek cok uygulama icin 401 doner; bu da OAuth1
+          // fallback'ini tetiklemeli (sadece 403 degil).
+          return jsonResponse(
+            {
+              detail: "Unauthorized",
+              status: 401,
+              title: "Unauthorized",
+              type: "about:blank"
+            },
+            401
+          );
+        }
+
+        if (href === "https://upload.twitter.com/1.1/media/upload.json") {
+          const headers = init?.headers as Record<string, string>;
+          expect(headers.Authorization).toContain("OAuth ");
+          expect(headers.Authorization).toContain(
+            'oauth_token="oauth1-token"'
+          );
+          return jsonResponse({ media_id_string: "media-v1" });
+        }
+
+        expect(href).toBe("https://api.x.com/2/tweets");
+        return jsonResponse({ data: { id: "tweet-with-v1-media" } });
+      });
+
+    const result = await new XPublisher().publish({
+      ...xContext,
+      card: { ...xContext.card, mediaFileId: "media-file-1" },
+      credentials: {
+        accessToken: "token",
+        xOAuth1: {
+          accessToken: "oauth1-token",
+          accessTokenSecret: "oauth1-secret"
+        }
+      },
+      loadMedia: async () => ({
+        buffer: Buffer.from("image"),
+        fileName: "image.png",
+        fileSize: 5,
+        mimeType: "image/png"
+      })
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result.externalPostId).toBe("tweet-with-v1-media");
+  });
+
+  it("asks to add OAuth1 tokens when OAuth2 media upload returns 401 and no OAuth1 credentials exist", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse(
+        {
+          detail: "Unauthorized",
+          status: 401,
+          title: "Unauthorized",
+          type: "about:blank"
+        },
+        401
+      )
+    );
+
+    await expect(
+      new XPublisher().publish({
+        ...xContext,
+        card: { ...xContext.card, mediaFileId: "media-file-1" },
+        credentials: { accessToken: "token", xOAuth1: null },
+        loadMedia: async () => ({
+          buffer: Buffer.from("image"),
+          fileName: "image.png",
+          fileSize: 5,
+          mimeType: "image/png"
+        })
+      })
+    ).rejects.toMatchObject({
+      code: "X_MEDIA_UPLOAD_FAILED",
+      message: expect.stringContaining("OAuth1 Access Token")
+    });
+  });
+
   it("explains OAuth1 media upload permission failures separately", async () => {
     vi.stubEnv("X_API_KEY", "api-key");
     vi.stubEnv("X_API_SECRET", "api-secret");
