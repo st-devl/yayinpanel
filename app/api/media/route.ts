@@ -86,6 +86,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    throw error;
+    console.error("Media upload failed", error);
+    return NextResponse.json(
+      { error: "Medya yuklenirken sunucu hatasi olustu." },
+      { status: 500 }
+    );
   }
 }

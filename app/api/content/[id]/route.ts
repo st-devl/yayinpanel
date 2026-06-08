@@ -34,7 +34,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
   if (auth.response) return auth.response;
 
   const { id } = await context.params;
-  const parsed = actionSchema.safeParse(await request.json());
+  const body = await request.json().catch(() => null);
+  const parsed = actionSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json({ error: "Gecersiz aksiyon" }, { status: 400 });
@@ -84,7 +85,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (auth.response) return auth.response;
 
   const { id } = await context.params;
-  const parsed = updateSchema.safeParse(await request.json());
+  const body = await request.json().catch(() => null);
+  const parsed = updateSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json({ error: "Gecersiz guncelleme" }, { status: 400 });

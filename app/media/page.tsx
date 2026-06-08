@@ -5,6 +5,7 @@ import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { MaterialIcon } from "@/components/material-icon";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { readJsonResponse } from "@/lib/client/http";
 
 type ViewMode = "grid" | "list";
 
@@ -114,10 +115,10 @@ export default function MediaPage() {
         const response = await fetch(`/api/media?${params.toString()}`);
         if (!active) return;
 
-        const payload = (await response.json()) as {
+        const payload = await readJsonResponse<{
           data?: MediaFile[];
           error?: string;
-        };
+        }>(response);
         if (!active) return;
 
         if (!response.ok) {
@@ -158,10 +159,10 @@ export default function MediaPage() {
     }
 
     const response = await fetch(`/api/media?${params.toString()}`);
-    const payload = (await response.json()) as {
+    const payload = await readJsonResponse<{
       data?: MediaFile[];
       error?: string;
-    };
+    }>(response);
 
     if (!response.ok) {
       throw new Error(payload.error ?? "Medya dosyaları yenilenemedi.");
@@ -210,10 +211,10 @@ export default function MediaPage() {
         body: formData,
         method: "POST"
       });
-      const payload = (await response.json()) as {
+      const payload = await readJsonResponse<{
         data?: MediaFile;
         error?: string;
-      };
+      }>(response);
 
       if (!response.ok) {
         throw new Error(payload.error ?? "Medya yüklenemedi.");
@@ -251,7 +252,7 @@ export default function MediaPage() {
       const response = await fetch(`/api/media/${media.id}`, {
         method: "DELETE"
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = await readJsonResponse<{ error?: string }>(response);
 
       if (!response.ok) {
         throw new Error(payload.error ?? "Medya silinemedi.");

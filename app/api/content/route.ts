@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
   const auth = await requireApiUser();
   if (auth.response) return auth.response;
 
-  const parsed = bulkSchema.safeParse(await request.json());
+  const body = await request.json().catch(() => null);
+  const parsed = bulkSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(

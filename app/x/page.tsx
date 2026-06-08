@@ -13,6 +13,7 @@ import {
 } from "@/components/ai/bulk-upload-zone";
 import { InstructionInput } from "@/components/ai/instruction-input";
 import { ProcessingIndicator } from "@/components/ai/processing-indicator";
+import { readJsonResponse } from "@/lib/client/http";
 
 type XAccount = {
   id: string;
@@ -100,10 +101,12 @@ export default function XPage() {
     async function loadAccounts() {
       try {
         const response = await fetch("/api/accounts/x");
-        const payload = (await response.json()) as { data?: XAccount[] };
+        const payload = await readJsonResponse<{ data?: XAccount[]; error?: string }>(
+          response
+        );
 
         if (!response.ok) {
-          throw new Error("X hesapları alınamadı.");
+          throw new Error(payload.error ?? "X hesapları alınamadı.");
         }
 
         if (active) {
@@ -182,10 +185,10 @@ export default function XPage() {
           body: formData,
           method: "POST"
         });
-        const payload = (await response.json()) as {
+        const payload = await readJsonResponse<{
           data?: MediaFile;
           error?: string;
-        };
+        }>(response);
 
         if (!response.ok || !payload.data) {
           throw new Error(payload.error ?? `${file.name} yüklenemedi.`);
@@ -271,10 +274,10 @@ export default function XPage() {
         headers: { "Content-Type": "application/json" },
         method: "POST"
       });
-      const payload = (await response.json()) as {
+      const payload = await readJsonResponse<{
         count?: number;
         error?: string;
-      };
+      }>(response);
 
       if (!response.ok) {
         throw new Error(payload.error ?? "Kart oluşturma başarısız.");
@@ -439,10 +442,10 @@ export default function XPage() {
                             method: "POST",
                             body: fd
                           });
-                          const p = (await r.json()) as {
+                          const p = await readJsonResponse<{
                             data?: { id: string };
                             error?: string;
-                          };
+                          }>(r);
                           if (!r.ok || !p.data)
                             throw new Error(
                               p.error ?? `${f.file.name} yüklenemedi.`
@@ -463,10 +466,10 @@ export default function XPage() {
                             instructionText: aiInstruction
                           })
                         });
-                        const payload = (await res.json()) as {
+                        const payload = await readJsonResponse<{
                           data?: { batchId: string };
                           error?: string;
-                        };
+                        }>(res);
                         if (!res.ok || !payload.data)
                           throw new Error(payload.error ?? "İşleme başarısız.");
                         router.push(`/review/${payload.data.batchId}`);

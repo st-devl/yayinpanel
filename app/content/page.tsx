@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { MaterialIcon } from "@/components/material-icon";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { readJsonResponse } from "@/lib/client/http";
 
 type Platform = "INSTAGRAM" | "X" | "WORDPRESS";
 
@@ -163,38 +164,47 @@ export default function ContentPage() {
   useEffect(() => {
     async function loadAccounts() {
       const [instagram, x, wordpress] = await Promise.all([
-        fetch("/api/accounts/instagram").then((response) => response.json()),
-        fetch("/api/accounts/x").then((response) => response.json()),
-        fetch("/api/accounts/wordpress").then((response) => response.json())
+        fetch("/api/accounts/instagram").then((response) =>
+          readJsonResponse<{
+            data?: Array<{ id: string; username: string }>;
+            error?: string;
+          }>(response)
+        ),
+        fetch("/api/accounts/x").then((response) =>
+          readJsonResponse<{
+            data?: Array<{ id: string; username: string; xUserId: string }>;
+            error?: string;
+          }>(response)
+        ),
+        fetch("/api/accounts/wordpress").then((response) =>
+          readJsonResponse<{
+            data?: Array<{ id: string; name: string }>;
+            error?: string;
+          }>(response)
+        )
       ]);
 
       setAccounts([
         ...(
-          (instagram.data ?? []) as Array<{ id: string; username: string }>
+          instagram.data ?? []
         ).map((account) => ({
           id: account.id,
           label: `Instagram @${account.username}`,
           platform: "INSTAGRAM" as const
         })),
         ...(
-          (x.data ?? []) as Array<{
-            id: string;
-            username: string;
-            xUserId: string;
-          }>
+          x.data ?? []
         ).map((account) => ({
           aliases: [account.id],
           id: account.xUserId,
           label: `X @${account.username}`,
           platform: "X" as const
         })),
-        ...((wordpress.data ?? []) as Array<{ id: string; name: string }>).map(
-          (site) => ({
-            id: site.id,
-            label: `Blog ${site.name}`,
-            platform: "WORDPRESS" as const
-          })
-        )
+        ...(wordpress.data ?? []).map((site) => ({
+          id: site.id,
+          label: `Blog ${site.name}`,
+          platform: "WORDPRESS" as const
+        }))
       ]);
     }
 
@@ -218,10 +228,10 @@ export default function ContentPage() {
         const response = await fetch(`/api/content?${params.toString()}`);
         if (!active) return;
 
-        const payload = (await response.json()) as {
+        const payload = await readJsonResponse<{
           data?: ContentCard[];
           error?: string;
-        };
+        }>(response);
         if (!active) return;
 
         if (!response.ok) {
@@ -257,7 +267,7 @@ export default function ContentPage() {
     if (to) params.set("to", to);
 
     const response = await fetch(`/api/content?${params.toString()}`);
-    const payload = (await response.json()) as { data?: ContentCard[] };
+    const payload = await readJsonResponse<{ data?: ContentCard[] }>(response);
     setCards(payload.data ?? []);
   }
 
@@ -272,7 +282,7 @@ export default function ContentPage() {
         headers: { "Content-Type": "application/json" },
         method: "POST"
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = await readJsonResponse<{ error?: string }>(response);
 
       if (!response.ok) {
         throw new Error(payload.error ?? "İşlem başarısız.");
@@ -321,7 +331,7 @@ export default function ContentPage() {
         headers: { "Content-Type": "application/json" },
         method: "PATCH"
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = await readJsonResponse<{ error?: string }>(response);
 
       if (!response.ok) {
         throw new Error(payload.error ?? "Kart güncellenemedi.");
@@ -388,10 +398,10 @@ export default function ContentPage() {
         headers: { "Content-Type": "application/json" },
         method: "POST"
       });
-      const payload = (await response.json()) as {
+      const payload = await readJsonResponse<{
         data?: { updated: number; total: number; published: number };
         error?: string;
-      };
+      }>(response);
 
       if (!response.ok || !payload.data) {
         throw new Error(payload.error ?? "Toplu işlem başarısız.");

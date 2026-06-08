@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { BulkUploadZone, type UploadedFile } from "@/components/ai/bulk-upload-zone";
 import { InstructionInput } from "@/components/ai/instruction-input";
 import { ProcessingIndicator } from "@/components/ai/processing-indicator";
+import { readJsonResponse } from "@/lib/client/http";
 
 type WordPressSite = {
   id: string;
@@ -142,12 +143,16 @@ export default function BlogPage() {
         ]);
 
         const [wpPayload, csPayload] = await Promise.all([
-          wpRes.json() as Promise<{ data?: WordPressSite[] }>,
-          csRes.json() as Promise<{ data?: CustomSite[] }>
+          readJsonResponse<{ data?: WordPressSite[]; error?: string }>(wpRes),
+          readJsonResponse<{ data?: CustomSite[]; error?: string }>(csRes)
         ]);
 
-        if (!wpRes.ok) throw new Error("WordPress siteleri alınamadı.");
-        if (!csRes.ok) throw new Error("Özel siteler alınamadı.");
+        if (!wpRes.ok) {
+          throw new Error(wpPayload.error ?? "WordPress siteleri alınamadı.");
+        }
+        if (!csRes.ok) {
+          throw new Error(csPayload.error ?? "Özel siteler alınamadı.");
+        }
 
         if (active) {
           const nextSites: AnySite[] = [
@@ -231,10 +236,10 @@ export default function BlogPage() {
         body: formData,
         method: "POST"
       });
-      const payload = (await response.json()) as {
+      const payload = await readJsonResponse<{
         data?: MediaFile;
         error?: string;
-      };
+      }>(response);
 
       if (!response.ok || !payload.data) {
         throw new Error(payload.error ?? "Öne çıkan görsel yüklenemedi.");
@@ -281,7 +286,10 @@ export default function BlogPage() {
         const formData = new FormData();
         formData.append("file", f.file);
         const res = await fetch("/api/media", { method: "POST", body: formData });
-        const payload = (await res.json()) as { data?: { id: string }; error?: string };
+        const payload = await readJsonResponse<{
+          data?: { id: string };
+          error?: string;
+        }>(res);
 
         if (!res.ok || !payload.data) {
           throw new Error(payload.error ?? `${f.file.name} yüklenemedi.`);
@@ -307,10 +315,10 @@ export default function BlogPage() {
         })
       });
 
-      const payload = (await res.json()) as {
+      const payload = await readJsonResponse<{
         data?: { batchId: string };
         error?: string;
-      };
+      }>(res);
 
       if (!res.ok || !payload.data) {
         throw new Error(payload.error ?? "İşleme başarısız.");
@@ -413,7 +421,7 @@ export default function BlogPage() {
         headers: { "Content-Type": "application/json" },
         method: "POST"
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = await readJsonResponse<{ error?: string }>(response);
 
       if (!response.ok) {
         throw new Error(payload.error ?? "Blog kartı oluşturulamadı.");

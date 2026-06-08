@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { MaterialIcon } from "@/components/material-icon";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { readJsonResponse } from "@/lib/client/http";
 import {
   matchCaptionsWithMedia,
   parseBulkCaptions
@@ -78,8 +79,11 @@ export function InstagramPanel({
           method: "POST",
           body: formData
         });
-        const body = await response.json();
-        if (!response.ok) {
+        const body = await readJsonResponse<{
+          data?: UploadedMedia;
+          error?: string;
+        }>(response);
+        if (!response.ok || !body.data) {
           throw new Error(body.error ?? "Yukleme basarisiz");
         }
         uploaded.push({
@@ -161,7 +165,10 @@ export function InstagramPanel({
             : { startDate, startTime, frequency, skipWeekends }
         })
       });
-      const body = await response.json();
+      const body = await readJsonResponse<{
+        count?: number;
+        error?: string;
+      }>(response);
       if (!response.ok) {
         throw new Error(body.error ?? "Kart olusturulamadi");
       }
