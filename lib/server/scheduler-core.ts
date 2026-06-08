@@ -3,6 +3,7 @@ import "server-only";
 import { ContentStatus, Prisma, PublishLogStatus } from "@prisma/client";
 import { prisma } from "@/lib/server/prisma";
 import { publishCard } from "@/lib/server/publish-runner";
+import { refreshDueXTokens } from "@/lib/server/x-token";
 import {
   recordSchedulerTickFailure,
   recordSchedulerTickStart,
@@ -207,6 +208,19 @@ export async function runSchedulerTick(options?: {
     };
 
     result.manualCheck = dryRun ? 0 : await reclaimStuckCards(now);
+
+    // Proaktif: suresi yaklasan X token'larini yayin anini beklemeden tazele.
+    // Hata yutulur; token tazeleme yayin dongusunu bloke etmemeli.
+    if (!dryRun) {
+      try {
+        const refreshed = await refreshDueXTokens(now);
+        if (refreshed > 0) {
+          console.log(`[scheduler] proactively refreshed ${refreshed} X token(s)`);
+        }
+      } catch (error) {
+        console.error("[scheduler] proactive X token refresh failed", error);
+      }
+    }
 
     const dueCards = await findDueCards(now, limit);
 

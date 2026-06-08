@@ -3,20 +3,19 @@ import "server-only";
 import { ConnectionStatus } from "@prisma/client";
 import { verifyCustomSiteConnection } from "@/lib/integrations/custom-site";
 import { verifyInstagramToken } from "@/lib/integrations/instagram-token";
-import { refreshXAccessToken, verifyXToken } from "@/lib/integrations/x-oauth";
+import { verifyXToken } from "@/lib/integrations/x-oauth";
 import { verifyWordPressConnection } from "@/lib/integrations/wordpress";
 import { PublishError } from "@/lib/publishers/errors";
 import {
   getCustomSiteCredentials,
   getInstagramAccessToken,
   getWordPressCredentials,
-  getXTokens,
   setCustomSiteConnectionStatus,
   setInstagramConnectionStatus,
   setWordPressConnectionStatus,
-  setXConnectionStatus,
-  updateXTokens
+  setXConnectionStatus
 } from "@/lib/server/account-credentials";
+import { ensureFreshXToken } from "@/lib/server/x-token";
 import { prisma } from "@/lib/server/prisma";
 
 export type ConnectionTestResult = {
@@ -78,13 +77,38 @@ export async function testInstagramConnection(
 export async function testXConnection(
   accountId: string
 ): Promise<ConnectionTestResult> {
-  const tokens = await getXTokens(accountId);
+  // Tek otorite: token bitmek uzereyse dogrulamadan once proaktif yenilenir.
+  let tokens: Awaited<ReturnType<typeof ensureFreshXToken>>;
+  try {
+    tokens = await ensureFreshXToken(accountId);
+  } catch (error) {
+    // Refresh gerekti ama basarisiz oldu -> ensureFreshXToken durumu zaten
+    // NEEDS_RECONNECT/TOKEN_EXPIRED olarak isaretledi.
+    const message =
+      error instanceof PublishError ? error.message : "X token yenilenemedi";
+    const connectionStatus =
+      error instanceof PublishError && error.httpStatus
+        ? statusFromHttp(error.httpStatus)
+        : ConnectionStatus.NEEDS_RECONNECT;
+    return { ok: false, connectionStatus, message };
+  }
 
   if (!tokens) {
     return { ok: false, connectionStatus: ConnectionStatus.DISCONNECTED };
   }
 
-  const result = await verifyXToken(tokens.accessToken);
+  let result = await verifyXToken(tokens.accessToken);
+
+  // Proaktif token taze olsa da sunucu tarafinda iptal edilmis olabilir;
+  // 401'de refresh token ile bir kez zorla yenileyip tekrar dogrula.
+  if (!result.ok && result.status === 401) {
+    const refreshed = await ensureFreshXToken(accountId, {
+      force: true
+    }).catch(() => null);
+    if (refreshed) {
+      result = await verifyXToken(refreshed.accessToken);
+    }
+  }
 
   if (result.ok) {
     await setXConnectionStatus(accountId, ConnectionStatus.CONNECTED);
@@ -106,31 +130,18 @@ export async function testXConnection(
 export async function reconnectXAccount(
   accountId: string
 ): Promise<ConnectionTestResult> {
-  const tokens = await getXTokens(accountId);
-
-  if (!tokens?.refreshToken) {
-    await setXConnectionStatus(
-      accountId,
-      ConnectionStatus.NEEDS_RECONNECT,
-      "Refresh token bulunamadi"
-    );
-    return {
-      ok: false,
-      connectionStatus: ConnectionStatus.NEEDS_RECONNECT,
-      message: "Refresh token bulunamadi"
-    };
-  }
-
   try {
-    const refreshed = await refreshXAccessToken(tokens.refreshToken);
-    await updateXTokens(accountId, {
-      accessToken: refreshed.accessToken,
-      refreshToken: refreshed.refreshToken ?? tokens.refreshToken,
-      tokenExpiresAt: refreshed.expiresAt
-    });
+    // Tek otorite uzerinden zorla yenile; durum/persist orada yonetilir.
+    const refreshed = await ensureFreshXToken(accountId, { force: true });
 
+    if (!refreshed) {
+      return { ok: false, connectionStatus: ConnectionStatus.DISCONNECTED };
+    }
+
+    await setXConnectionStatus(accountId, ConnectionStatus.CONNECTED);
     return { ok: true, connectionStatus: ConnectionStatus.CONNECTED };
   } catch (error) {
+    // ensureFreshXToken baglanti durumunu zaten isaretledi; mesaji yuzeye cikar.
     const message =
       error instanceof PublishError
         ? error.message
@@ -140,7 +151,6 @@ export async function reconnectXAccount(
         ? statusFromHttp(error.httpStatus)
         : ConnectionStatus.NEEDS_RECONNECT;
 
-    await setXConnectionStatus(accountId, connectionStatus, message);
     return { ok: false, connectionStatus, message };
   }
 }

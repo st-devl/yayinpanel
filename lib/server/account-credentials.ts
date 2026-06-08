@@ -160,6 +160,7 @@ async function findXAccountByReference(
     select: {
       id: true,
       xUserId: true,
+      tokenExpiresAt: true,
       accessTokenEncrypted: true,
       refreshTokenEncrypted: true,
       oauth1AccessTokenEncrypted: true,
@@ -178,6 +179,7 @@ async function findXAccountByReference(
     select: {
       id: true,
       xUserId: true,
+      tokenExpiresAt: true,
       accessTokenEncrypted: true,
       refreshTokenEncrypted: true,
       oauth1AccessTokenEncrypted: true,
@@ -485,6 +487,7 @@ export async function getXTokens(
       ? decryptSecret(account.refreshTokenEncrypted)
       : null,
     oauth1: decryptXOAuth1(account),
+    tokenExpiresAt: account.tokenExpiresAt,
     xUserId: account.xUserId
   };
 }

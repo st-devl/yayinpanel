@@ -11,6 +11,10 @@ export default defineConfig({
   test: {
     exclude: ["node_modules", ".next", "test-results", "playwright-report"],
     include: ["tests/**/*.test.ts"],
+    // Tum entegrasyon testleri tek bir paylasilan SQLite dev.db kullanir ve
+    // bazi testler global DB durumuna bakar (or. tek aktif X hesabi fallback'i).
+    // Dosyalari seri calistirarak paylasilan DB uzerindeki yarislari engelle.
+    fileParallelism: false,
     env: {
       DATABASE_URL: "file:./dev.db",
       APP_BASE_URL: "http://localhost:3000",

@@ -6,16 +6,14 @@ import { PublishError } from "@/lib/publishers/errors";
 import { runPublish } from "@/lib/publishers";
 import type { PublishContext, PublishOutcome } from "@/lib/publishers/types";
 import { refreshInstagramToken } from "@/lib/integrations/instagram-token";
-import { refreshXAccessToken } from "@/lib/integrations/x-oauth";
 import {
   getCustomSiteCredentials,
   getInstagramAccessToken,
   getWordPressCredentials,
-  getXTokens,
   setXConnectionStatus,
-  updateInstagramAccessToken,
-  updateXTokens
+  updateInstagramAccessToken
 } from "@/lib/server/account-credentials";
+import { ensureFreshXToken } from "@/lib/server/x-token";
 import { getEnv } from "@/lib/server/env";
 import { createSignedMediaFileUrl } from "@/lib/server/media-access";
 import { readMediaBinary } from "@/lib/server/media-storage";
@@ -105,7 +103,8 @@ async function buildPublishContext(card: CardForPublish): Promise<{
   }
 
   if (card.platform === Platform.X) {
-    const tokens = await getXTokens(card.accountId, {
+    // Tek otorite: token bitmek uzereyse yayindan once proaktif yenilenir.
+    const tokens = await ensureFreshXToken(card.accountId, {
       allowSingleAccountFallback: true
     });
 
@@ -133,17 +132,19 @@ async function buildPublishContext(card: CardForPublish): Promise<{
     return {
       accountId: tokens.xUserId,
       context,
+      // Proaktif token taze olmasina ragmen sunucu tarafinda iptal edilmis
+      // olabilir; AUTH hatasinda zorla bir kez daha yenile.
       refreshCredentials: async () => {
-        if (!tokens.refreshToken) {
+        const refreshed = await ensureFreshXToken(tokens.xUserId, {
+          force: true
+        }).catch(() => null);
+        if (!refreshed) {
           return null;
         }
-        const refreshed = await refreshXAccessToken(tokens.refreshToken);
-        await updateXTokens(tokens.xUserId, {
+        return {
           accessToken: refreshed.accessToken,
-          refreshToken: refreshed.refreshToken ?? tokens.refreshToken,
-          tokenExpiresAt: refreshed.expiresAt
-        });
-        return { accessToken: refreshed.accessToken, xOAuth1: tokens.oauth1 };
+          xOAuth1: refreshed.oauth1
+        };
       }
     };
   }
