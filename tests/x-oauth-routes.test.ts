@@ -8,6 +8,7 @@ import { getXOAuthCredentials } from "@/lib/server/x-credentials";
 import { buildXAuthorizeUrl } from "@/lib/integrations/x-oauth";
 
 vi.mock("@/lib/server/env", () => ({
+  getAppBaseUrl: () => "https://yayinpanel.cloud",
   getEnv: () => ({
     APP_BASE_URL: "https://yayinpanel.cloud",
     ENCRYPTION_KEY:

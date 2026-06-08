@@ -25,7 +25,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (auth.response) return auth.response;
 
   const { id } = await context.params;
-  const parsed = updateSchema.safeParse(await request.json());
+  const body = await request.json().catch(() => null);
+  const parsed = updateSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -39,15 +40,23 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Hesap bulunamadi" }, { status: 404 });
   }
 
-  const updated = await updateXTokens(id, {
-    accessToken: parsed.data.accessToken,
-    refreshToken: parsed.data.refreshToken,
-    oauth1AccessToken: parsed.data.oauth1AccessToken,
-    oauth1AccessTokenSecret: parsed.data.oauth1AccessTokenSecret,
-    tokenExpiresAt: parsed.data.tokenExpiresAt
-  });
+  try {
+    const updated = await updateXTokens(id, {
+      accessToken: parsed.data.accessToken,
+      refreshToken: parsed.data.refreshToken,
+      oauth1AccessToken: parsed.data.oauth1AccessToken,
+      oauth1AccessTokenSecret: parsed.data.oauth1AccessTokenSecret,
+      tokenExpiresAt: parsed.data.tokenExpiresAt
+    });
 
-  return NextResponse.json({ data: updated });
+    return NextResponse.json({ data: updated });
+  } catch (error) {
+    console.error("X account token update failed", error);
+    return NextResponse.json(
+      { error: "X hesap token bilgileri kaydedilemedi." },
+      { status: 500 }
+    );
+  }
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {

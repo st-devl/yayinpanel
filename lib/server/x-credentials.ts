@@ -1,7 +1,6 @@
 import "server-only";
 
 import { decryptSecret, encryptSecret } from "@/lib/security/encryption";
-import { getEnv } from "@/lib/server/env";
 import { prisma } from "@/lib/server/prisma";
 
 const CLIENT_ID_KEY = "integration.x.clientId";
@@ -18,6 +17,10 @@ function clean(value: string): string {
   return value.replace(/[^\x21-\x7E]/g, "");
 }
 
+function readEnvCredential(key: "X_CLIENT_ID" | "X_CLIENT_SECRET") {
+  return process.env[key]?.trim() ?? "";
+}
+
 /**
  * X OAuth2 istemci bilgilerini cozumler: once veritabani (admin panelden
  * girilen) degerleri, yoksa env (X_CLIENT_ID / X_CLIENT_SECRET) kullanilir.
@@ -28,14 +31,13 @@ export async function getXOAuthCredentials(): Promise<XOAuthCredentials> {
   });
   const byKey = new Map(rows.map((row) => [row.key, row.value]));
 
-  const env = getEnv();
-
-  const clientId = byKey.get(CLIENT_ID_KEY)?.trim() || env.X_CLIENT_ID;
+  const clientId =
+    byKey.get(CLIENT_ID_KEY)?.trim() || readEnvCredential("X_CLIENT_ID");
 
   const encryptedSecret = byKey.get(CLIENT_SECRET_KEY);
   const clientSecret = encryptedSecret
     ? decryptSecret(encryptedSecret)
-    : env.X_CLIENT_SECRET;
+    : readEnvCredential("X_CLIENT_SECRET");
 
   return { clientId: clean(clientId), clientSecret: clean(clientSecret) };
 }
@@ -50,12 +52,11 @@ export async function getXOAuthStatus(): Promise<{
     where: { key: { in: [CLIENT_ID_KEY, CLIENT_SECRET_KEY] } }
   });
   const byKey = new Map(rows.map((row) => [row.key, row.value]));
-  const env = getEnv();
 
   const dbId = Boolean(byKey.get(CLIENT_ID_KEY)?.trim());
   const dbSecret = Boolean(byKey.get(CLIENT_SECRET_KEY));
-  const envId = Boolean(env.X_CLIENT_ID);
-  const envSecret = Boolean(env.X_CLIENT_SECRET);
+  const envId = Boolean(readEnvCredential("X_CLIENT_ID"));
+  const envSecret = Boolean(readEnvCredential("X_CLIENT_SECRET"));
 
   const source = dbId || dbSecret ? "database" : envId || envSecret ? "env" : "none";
 

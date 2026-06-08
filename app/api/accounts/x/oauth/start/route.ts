@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/server/session";
-import { getEnv } from "@/lib/server/env";
+import { getAppBaseUrl } from "@/lib/server/env";
 import { getXOAuthCredentials } from "@/lib/server/x-credentials";
 import { buildXAuthorizeUrl } from "@/lib/integrations/x-oauth";
 
@@ -23,8 +23,7 @@ function buildCanonicalStartUrl(appUrl: string): URL {
 
 /** "X ile Baglan": PKCE verifier/state uretir, cookie'ye yazar, X'e yonlendirir. */
 export async function GET(request: NextRequest) {
-  const env = getEnv();
-  const appUrl = env.APP_BASE_URL;
+  const appUrl = getAppBaseUrl();
   const canonicalStartUrl = buildCanonicalStartUrl(appUrl);
 
   if (request.nextUrl.origin !== canonicalStartUrl.origin) {

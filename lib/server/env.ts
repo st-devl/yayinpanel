@@ -70,6 +70,16 @@ export function getEncryptionKeyHex() {
   return value;
 }
 
+export function getAppBaseUrl() {
+  const parsed = z.string().url().safeParse(process.env.APP_BASE_URL);
+
+  if (!parsed.success) {
+    throw new Error("APP_BASE_URL must be a valid public URL.");
+  }
+
+  return parsed.data;
+}
+
 function formatEnvIssue(issue: z.ZodIssue) {
   const key = issue.path[0]?.toString() as keyof AppEnv | undefined;
   const label = key ?? "ENV";

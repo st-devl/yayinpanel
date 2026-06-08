@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/server/session";
-import { getEnv } from "@/lib/server/env";
+import { getAppBaseUrl } from "@/lib/server/env";
 import { exchangeXAuthCode, verifyXToken } from "@/lib/integrations/x-oauth";
 import { upsertXAccountFromOAuth } from "@/lib/server/account-credentials";
 
@@ -21,7 +21,7 @@ function redirectWith(appUrl: string, params: Record<string, string>) {
 
 /** X OAuth2 (PKCE) callback: code'u user token'a cevirip hesabi kaydeder. */
 export async function GET(request: NextRequest) {
-  const appUrl = getEnv().APP_BASE_URL;
+  const appUrl = getAppBaseUrl();
 
   const user = await getCurrentUser();
   if (!user) {
