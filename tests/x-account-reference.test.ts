@@ -153,4 +153,37 @@ describe("X account references for publishing", () => {
       accessTokenSecret: "oauth1-access-secret"
     });
   });
+
+  it("does not fail the whole publish when only the optional OAuth1 media credentials are undecryptable", async () => {
+    const account = await createConnectedXAccount();
+
+    // Bir ENCRYPTION_KEY degisimi sonrasi olusan durumu simule et: birincil
+    // OAuth2 access token gecerli, ama opsiyonel OAuth1 medya token'lari
+    // mevcut anahtarla cozulemiyor (eski anahtarla sifrelenmis/bozuk ciphertext).
+    await prisma.xAccount.update({
+      where: { id: account.id },
+      data: {
+        oauth1AccessTokenEncrypted: "not-a-valid-ciphertext",
+        oauth1AccessTokenSecretEncrypted: "not-a-valid-ciphertext"
+      }
+    });
+
+    const tokens = await getXTokens(account.xUserId);
+    expect(tokens?.accessToken).toBe("access-token");
+    expect(tokens?.oauth1).toBeNull();
+
+    // Metin karti (medya gerektirmez) CREDENTIALS_DECRYPT_FAILED ile dusmemeli.
+    const card = await createXCard(account.xUserId);
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(jsonResponse({ data: { id: "tweet-no-oauth1" } }));
+
+    const outcome = await publishCard(card);
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.result.externalPostId).toBe("tweet-no-oauth1");
+    }
+  });
 });

@@ -431,6 +431,43 @@ export async function updateXTokens(
   });
 }
 
+/**
+ * OAuth1 medya token'larini cozer. Bunlar yalnizca gorsel/medya yuklemesinin
+ * OAuth1 fallback'i icin gerekli OPSIYONEL kimlik bilgileridir; panele bir kez
+ * elle girilip sonraki OAuth2 yeniden baglanmalarinda korunduklari icin bir
+ * ENCRYPTION_KEY degisiminden sonra eski anahtarla kalabilirler. Bu durumda
+ * cozme hatasi tum yayini opak "CREDENTIALS_DECRYPT_FAILED" ile dusurmemeli;
+ * OAuth1'i kullanilamaz (null) sayip metin/OAuth2-medya akislarinin calismasina
+ * izin veriyoruz. Gercek hata, gerektiginde medya yukleme adiminda actionable
+ * olarak yuzeye cikar.
+ */
+function decryptXOAuth1(account: {
+  oauth1AccessTokenEncrypted: string | null;
+  oauth1AccessTokenSecretEncrypted: string | null;
+}) {
+  if (
+    !account.oauth1AccessTokenEncrypted ||
+    !account.oauth1AccessTokenSecretEncrypted
+  ) {
+    return null;
+  }
+
+  try {
+    return {
+      accessToken: decryptSecret(account.oauth1AccessTokenEncrypted),
+      accessTokenSecret: decryptSecret(
+        account.oauth1AccessTokenSecretEncrypted
+      )
+    };
+  } catch (error) {
+    console.warn(
+      "X OAuth1 media credentials could not be decrypted; treating media upload credentials as unavailable.",
+      error instanceof Error ? error.message : error
+    );
+    return null;
+  }
+}
+
 export async function getXTokens(
   accountReference: string,
   options: { allowSingleAccountFallback?: boolean } = {}
@@ -447,16 +484,7 @@ export async function getXTokens(
     refreshToken: account.refreshTokenEncrypted
       ? decryptSecret(account.refreshTokenEncrypted)
       : null,
-    oauth1:
-      account.oauth1AccessTokenEncrypted &&
-      account.oauth1AccessTokenSecretEncrypted
-        ? {
-            accessToken: decryptSecret(account.oauth1AccessTokenEncrypted),
-            accessTokenSecret: decryptSecret(
-              account.oauth1AccessTokenSecretEncrypted
-            )
-          }
-        : null,
+    oauth1: decryptXOAuth1(account),
     xUserId: account.xUserId
   };
 }
