@@ -50,7 +50,14 @@ export function buildProvider(record: {
   baseUrl: string | null;
   timeoutSeconds: number;
 }): AIProviderInterface {
-  const apiKey = decryptSecret(record.apiKeyEncrypted);
+  let apiKey: string;
+  try {
+    apiKey = decryptSecret(record.apiKeyEncrypted);
+  } catch {
+    throw new Error(
+      "Yapay zekâ sağlayıcısı API anahtarı çözümlenemedi. Lütfen Ayarlar > Yapay Zekâ Sağlayıcıları bölümünden API anahtarını yeniden kaydedin."
+    );
+  }
   const config = {
     apiKey,
     model: record.model,

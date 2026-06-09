@@ -546,11 +546,17 @@ export async function getWordPressCredentials(siteId: string) {
     return null;
   }
 
-  return {
-    baseUrl: site.baseUrl,
-    username: site.username,
-    applicationPassword: decryptSecret(site.applicationPasswordEncrypted)
-  };
+  try {
+    return {
+      baseUrl: site.baseUrl,
+      username: site.username,
+      applicationPassword: decryptSecret(site.applicationPasswordEncrypted)
+    };
+  } catch {
+    throw new Error(
+      "WordPress uygulama şifresi çözümlenemedi. Lütfen Hesaplar bölümünden WordPress hesabını yeniden bağlayın."
+    );
+  }
 }
 
 export async function getWordPressApplicationPassword(siteId: string) {
@@ -640,10 +646,16 @@ export async function getCustomSiteCredentials(siteId: string) {
 
   if (!site) return null;
 
-  return {
-    baseUrl: site.baseUrl,
-    apiKey: decryptSecret(site.apiKeyEncrypted)
-  };
+  try {
+    return {
+      baseUrl: site.baseUrl,
+      apiKey: decryptSecret(site.apiKeyEncrypted)
+    };
+  } catch {
+    throw new Error(
+      "Site API anahtarı çözümlenemedi. Lütfen Hesaplar bölümünden siteyi yeniden bağlayın."
+    );
+  }
 }
 
 export async function setCustomSiteConnectionStatus(
