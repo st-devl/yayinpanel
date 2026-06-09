@@ -8,8 +8,12 @@ export function buildWebsitePrompt(params: {
 }): string {
   const mediaInfo =
     params.mediaFiles.length > 0
-      ? `\nYÜKLENEN GÖRSELLER:\n${params.mediaFiles
-          .map((f, i) => `  ${i + 1}. ID: ${f.fileId} | Dosya Adı: ${f.fileName}`)
+      ? `\nYÜKLENEN GÖRSELLER (sıra önemli, kullanıcı tarafından belirlenmiş):\n${params.mediaFiles
+          .map((f, i) =>
+            i === 0
+              ? `  1. ID: ${f.fileId} | Dosya: ${f.fileName} | ROL: featured_image (ana görsel) | order: 0`
+              : `  ${i + 1}. ID: ${f.fileId} | Dosya: ${f.fileName} | ROL: content_image (içerik görseli) | order: ${i}`
+          )
           .join("\n")}`
       : "\nGÖRSEL YOK: Bu içerikler için görsel yüklenmedi.";
 
@@ -65,6 +69,8 @@ ${params.rawText}
 - slug: Türkçe karakterleri İngilizce karşılıklarıyla değiştir (ş→s, ğ→g, ü→u, ö→o, ı→i, ç→c).
 - contentHtml: İçeriği uygun HTML etiketleriyle formatla (h2, h3, p, ul, li, strong, em).
 - Görsel yoksa media array'i boş bırak ve "MISSING_MEDIA" uyarısı ekleme (opsiyonel görsel).
-- Görsel dosya adı yazı sırasıyla örtüşüyorsa (1.jpg → birinci yazı) eşleştir.
-- Eşleştirme belirsizse media array'i boş bırak ve "MEDIA_MATCH_UNCERTAIN" uyarısı ekle.`;
+- Görsel varsa: yukarıdaki listede belirtilen ROL ve order değerlerini AYNEN kullan, değiştirme.
+- Birden fazla yazı varsa görselleri yazı sayısına göre böl (ilk yazıya ilk görsel vb.); belirsizse tüm görselleri ilk yazıya ver ve "MEDIA_MATCH_UNCERTAIN" uyarısı ekle.
+- content_image rolündeki görselleri contentHtml içine sırasına göre uygun yerlere <img> etiketi olarak yerleştir: <img src="/api/media/{fileId}/file" alt="{altText}" />
+- featured_image'ı contentHtml içine KOYMA, sadece media array'inde tanımla.`;
 }

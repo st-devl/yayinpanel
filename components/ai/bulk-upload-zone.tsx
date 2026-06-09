@@ -69,6 +69,17 @@ export function BulkUploadZone({ files, onChange, disabled }: BulkUploadZoneProp
     onChange(updated);
   }
 
+  function moveImage(imgIndex: number, direction: "up" | "down") {
+    const imgs = files.filter((f) => f.type === "image");
+    const targetIdx = direction === "up" ? imgIndex - 1 : imgIndex + 1;
+    if (targetIdx < 0 || targetIdx >= imgs.length) return;
+    const globalA = files.indexOf(imgs[imgIndex]);
+    const globalB = files.indexOf(imgs[targetIdx]);
+    const updated = [...files];
+    [updated[globalA], updated[globalB]] = [updated[globalB], updated[globalA]];
+    onChange(updated);
+  }
+
   function handleDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
     setDragging(false);
@@ -163,31 +174,63 @@ export function BulkUploadZone({ files, onChange, disabled }: BulkUploadZoneProp
           {imgFiles.length > 0 && (
             <div>
               <p className="mb-xs font-label-sm text-label-sm text-on-surface-variant">
-                Görseller ({imgFiles.length})
+                Görseller ({imgFiles.length}) — 1. görsel ana görsel olur
               </p>
-              <div className="flex flex-wrap gap-sm">
+              <div className="space-y-xs">
                 {imgFiles.map((f, i) => {
                   const globalIdx = files.indexOf(f);
+                  const isFirst = i === 0;
                   return (
-                    <div key={i} className="relative h-20 w-20 shrink-0">
+                    <div
+                      key={i}
+                      className="flex items-center gap-sm rounded-lg border border-outline-variant bg-surface-container-low px-sm py-xs"
+                    >
+                      {/* Sıra kontrolleri */}
+                      <div className="flex shrink-0 flex-col gap-[2px]">
+                        <button
+                          type="button"
+                          className="flex h-5 w-5 items-center justify-center rounded text-outline hover:bg-surface-container hover:text-on-surface disabled:opacity-25"
+                          disabled={i === 0}
+                          onClick={(e) => { e.stopPropagation(); moveImage(i, "up"); }}
+                        >
+                          <MaterialIcon name="arrow_drop_up" size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="flex h-5 w-5 items-center justify-center rounded text-outline hover:bg-surface-container hover:text-on-surface disabled:opacity-25"
+                          disabled={i === imgFiles.length - 1}
+                          onClick={(e) => { e.stopPropagation(); moveImage(i, "down"); }}
+                        >
+                          <MaterialIcon name="arrow_drop_down" size={16} />
+                        </button>
+                      </div>
+
+                      {/* Önizleme */}
                       {f.preview && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={f.preview}
                           alt={f.file.name}
-                          className="h-full w-full rounded-lg object-cover"
+                          className="h-10 w-10 shrink-0 rounded object-cover"
                         />
                       )}
+
+                      {/* İsim + rol etiketi */}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-body-sm text-body-sm">{f.file.name}</p>
+                        <p className={`font-body-sm text-body-sm ${isFirst ? "text-primary" : "text-outline"}`}>
+                          {isFirst ? "Ana görsel" : `İçerik görseli #${i}`}
+                        </p>
+                      </div>
+
+                      {/* Sil */}
                       <button
                         type="button"
-                        className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-error text-white"
+                        className="shrink-0 text-outline hover:text-error"
                         onClick={(e) => { e.stopPropagation(); removeFile(globalIdx); }}
                       >
-                        <MaterialIcon name="close" size={12} />
+                        <MaterialIcon name="close" size={16} />
                       </button>
-                      <p className="mt-xs truncate text-center text-[10px] text-outline">
-                        {f.file.name}
-                      </p>
                     </div>
                   );
                 })}
