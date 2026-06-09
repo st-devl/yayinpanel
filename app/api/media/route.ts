@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/server/api-auth";
 import {
+  isDocumentMimeType,
   isStoredMediaAvailable,
   MediaValidationError,
+  storeUploadedDocument,
   storeUploadedMedia
 } from "@/lib/server/media-storage";
 import { prisma } from "@/lib/server/prisma";
@@ -74,11 +76,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const media = await storeUploadedMedia({
-      buffer: Buffer.from(await file.arrayBuffer()),
-      mimeType: file.type,
-      originalFileName: file.name
-    });
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const storeInput = { buffer, mimeType: file.type, originalFileName: file.name };
+    const media = isDocumentMimeType(file.type)
+      ? await storeUploadedDocument(storeInput)
+      : await storeUploadedMedia(storeInput);
 
     return NextResponse.json(
       { data: await serializeMediaFile(media) },

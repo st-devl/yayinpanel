@@ -8,9 +8,30 @@ import { prisma } from "@/lib/server/prisma";
 import { getStorageDir } from "@/lib/server/env";
 
 const maxImageFileSize = 20 * 1024 * 1024;
+const maxDocumentFileSize = 20 * 1024 * 1024;
 const minAspectRatio = 0.25;
 const maxAspectRatio = 4;
 const allowedFormats = new Set(["jpeg", "png", "webp"]);
+
+const allowedDocumentMimeTypes = new Set([
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/pdf",
+  "text/markdown",
+  "text/plain",
+  "text/x-markdown"
+]);
+
+const documentExtensionsByMimeType: Record<string, string> = {
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+  "application/pdf": "pdf",
+  "text/markdown": "md",
+  "text/plain": "txt",
+  "text/x-markdown": "md"
+};
+
+export function isDocumentMimeType(mimeType: string) {
+  return allowedDocumentMimeTypes.has(mimeType);
+}
 
 const mimeTypesByFormat: Record<string, string> = {
   jpeg: "image/jpeg",
@@ -113,6 +134,53 @@ async function validateImageBuffer(buffer: Buffer) {
     mimeType: mimeTypesByFormat[format],
     width: metadata.width
   };
+}
+
+export async function storeUploadedDocument(input: StoreUploadedMediaInput) {
+  const mimeType = input.mimeType;
+
+  if (!allowedDocumentMimeTypes.has(mimeType)) {
+    throw new MediaValidationError(
+      "Only DOCX, PDF, Markdown and plain text files are supported"
+    );
+  }
+
+  if (input.buffer.byteLength < 1) {
+    throw new MediaValidationError("Uploaded file is empty");
+  }
+
+  if (input.buffer.byteLength > maxDocumentFileSize) {
+    throw new MediaValidationError("Uploaded file exceeds 20MB");
+  }
+
+  const id = randomUUID();
+  const extension = documentExtensionsByMimeType[mimeType] ?? "bin";
+  const fileName = `${id}.${extension}`;
+  const originalFileName = sanitizeOriginalFileName(input.originalFileName);
+  const storagePath = buildRelativeStoragePath(fileName);
+  const absolutePath = resolveStoragePath(storagePath);
+
+  await mkdir(path.dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, input.buffer);
+
+  try {
+    return await prisma.mediaFile.create({
+      data: {
+        id,
+        fileName,
+        originalFileName,
+        mimeType,
+        fileSize: input.buffer.byteLength,
+        width: null,
+        height: null,
+        storageType: "LOCAL",
+        storagePath
+      }
+    });
+  } catch (error) {
+    await unlink(absolutePath).catch(() => undefined);
+    throw error;
+  }
 }
 
 export async function storeUploadedMedia(input: StoreUploadedMediaInput) {
