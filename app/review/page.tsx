@@ -1,9 +1,19 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { MaterialIcon } from "@/components/material-icon";
-import { listPendingBatches } from "@/lib/server/processing-batches";
-import Link from "next/link";
 
-export const dynamic = "force-dynamic";
+type Batch = {
+  id: string;
+  platform: string;
+  status: string;
+  totalItems: number;
+  approvedItems: number;
+  createdAt: string;
+  _count?: { items: number };
+};
 
 const PLATFORM_LABELS: Record<string, string> = {
   INSTAGRAM: "Instagram",
@@ -19,8 +29,35 @@ const STATUS_LABELS: Record<string, string> = {
   FAILED: "Başarısız"
 };
 
-export default async function ReviewIndexPage() {
-  const batches = await listPendingBatches();
+export default function ReviewIndexPage() {
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadBatches();
+  }, []);
+
+  async function loadBatches() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/batches");
+      const payload = (await res.json()) as { data?: Batch[] };
+      setBatches(payload.data ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteBatch(id: string) {
+    setDeletingId(id);
+    try {
+      await fetch(`/api/batches/${id}`, { method: "DELETE" });
+      setBatches((prev) => prev.filter((b) => b.id !== id));
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <AppShell title="Onay Bekleyenler">
@@ -37,35 +74,30 @@ export default async function ReviewIndexPage() {
           </div>
         </section>
 
-        {batches.length === 0 ? (
+        {loading ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <MaterialIcon name="hourglass_empty" className="animate-spin text-outline" size={32} />
+          </div>
+        ) : batches.length === 0 ? (
           <div className="panel-card flex min-h-[320px] flex-col items-center justify-center gap-sm p-xl text-center">
             <MaterialIcon name="pending_actions" className="text-outline" size={48} />
             <p className="font-headline-sm text-headline-sm">
               Onay bekleyen içerik yok
             </p>
             <p className="max-w-md font-body-sm text-body-sm text-on-surface-variant">
-              Blog, Instagram veya X panellerinden "AI ile Toplu Yükle" seçeneğini
+              Blog, Instagram veya X panellerinden &quot;AI ile Toplu Yükle&quot; seçeneğini
               kullanarak içerik yükleyin.
             </p>
             <div className="mt-sm flex flex-wrap justify-center gap-sm">
-              <Link
-                href="/blog"
-                className="secondary-button px-md py-sm font-label-md text-label-md"
-              >
+              <Link href="/blog" className="secondary-button px-md py-sm font-label-md text-label-md">
                 <MaterialIcon name="web" size={16} />
                 Blog Paneli
               </Link>
-              <Link
-                href="/instagram"
-                className="secondary-button px-md py-sm font-label-md text-label-md"
-              >
+              <Link href="/instagram" className="secondary-button px-md py-sm font-label-md text-label-md">
                 <MaterialIcon name="photo_camera" size={16} />
                 Instagram Paneli
               </Link>
-              <Link
-                href="/x"
-                className="secondary-button px-md py-sm font-label-md text-label-md"
-              >
+              <Link href="/x" className="secondary-button px-md py-sm font-label-md text-label-md">
                 <MaterialIcon name="share" size={16} />
                 X Paneli
               </Link>
@@ -74,49 +106,62 @@ export default async function ReviewIndexPage() {
         ) : (
           <div className="grid grid-cols-1 gap-md md:grid-cols-2 xl:grid-cols-3">
             {batches.map((batch) => {
-              const batchWithCount = batch as typeof batch & {
-                _count?: { items: number };
-              };
-              const count =
-                batchWithCount._count?.items ?? batch.totalItems;
+              const count = batch._count?.items ?? batch.totalItems;
+              const isDeleting = deletingId === batch.id;
 
               return (
-                <Link
+                <div
                   key={batch.id}
-                  href={`/review/${batch.id}`}
-                  className="panel-card flex flex-col gap-sm p-md transition-shadow hover:shadow-panel-sm"
+                  className="panel-card flex flex-col gap-sm p-md"
                 >
-                  <div className="flex items-start justify-between gap-sm">
-                    <div className="flex items-center gap-xs">
-                      <MaterialIcon name="auto_awesome" className="text-primary" size={20} />
-                      <span className="font-label-md text-label-md">
-                        {PLATFORM_LABELS[batch.platform] ?? batch.platform}
+                  <Link
+                    href={`/review/${batch.id}`}
+                    className="flex flex-col gap-sm transition-opacity hover:opacity-80"
+                  >
+                    <div className="flex items-start justify-between gap-sm">
+                      <div className="flex items-center gap-xs">
+                        <MaterialIcon name="auto_awesome" className="text-primary" size={20} />
+                        <span className="font-label-md text-label-md">
+                          {PLATFORM_LABELS[batch.platform] ?? batch.platform}
+                        </span>
+                      </div>
+                      <span className="rounded-md border border-amber-200 bg-amber-50 px-xs py-0.5 font-label-sm text-label-sm text-amber-700">
+                        {STATUS_LABELS[batch.status] ?? batch.status}
                       </span>
                     </div>
-                    <span className="rounded-md border border-amber-200 bg-amber-50 px-xs py-0.5 font-label-sm text-label-sm text-amber-700">
-                      {STATUS_LABELS[batch.status] ?? batch.status}
-                    </span>
-                  </div>
 
-                  <div className="flex items-center gap-sm font-body-sm text-body-sm text-on-surface-variant">
-                    <span>{count} içerik</span>
-                    <span>·</span>
-                    <span>{batch.approvedItems} onaylandı</span>
-                    <span>·</span>
-                    <span>
-                      {new Intl.DateTimeFormat("tr-TR", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                        timeZone: "Europe/Istanbul"
-                      }).format(new Date(batch.createdAt))}
-                    </span>
-                  </div>
+                    <div className="flex items-center gap-sm font-body-sm text-body-sm text-on-surface-variant">
+                      <span>{count} içerik</span>
+                      <span>·</span>
+                      <span>{batch.approvedItems} onaylandı</span>
+                      <span>·</span>
+                      <span>
+                        {new Intl.DateTimeFormat("tr-TR", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                          timeZone: "Europe/Istanbul"
+                        }).format(new Date(batch.createdAt))}
+                      </span>
+                    </div>
 
-                  <div className="flex items-center gap-xs font-body-sm text-body-sm text-primary">
-                    <span>İncele ve Onayla</span>
-                    <MaterialIcon name="arrow_forward" size={16} />
+                    <div className="flex items-center gap-xs font-body-sm text-body-sm text-primary">
+                      <span>İncele ve Onayla</span>
+                      <MaterialIcon name="arrow_forward" size={16} />
+                    </div>
+                  </Link>
+
+                  <div className="border-t border-outline-variant pt-sm">
+                    <button
+                      type="button"
+                      className="secondary-button w-full px-sm py-2 font-label-sm text-label-sm text-error hover:bg-error-container/20 disabled:opacity-50"
+                      disabled={isDeleting}
+                      onClick={() => deleteBatch(batch.id)}
+                    >
+                      <MaterialIcon name="delete" size={16} />
+                      {isDeleting ? "Siliniyor..." : "Sil"}
+                    </button>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>
