@@ -119,7 +119,11 @@ export async function deleteAIProvider(id: string): Promise<void> {
     throw new Error("Sağlayıcı bulunamadı");
   }
 
-  await prisma.aIProvider.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.aIUsageLog.deleteMany({ where: { aiProviderId: id } }),
+    prisma.processingBatch.deleteMany({ where: { aiProviderId: id } }),
+    prisma.aIProvider.delete({ where: { id } })
+  ]);
 
   if (provider.isDefault) {
     const next = await prisma.aIProvider.findFirst({

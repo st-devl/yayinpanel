@@ -249,6 +249,9 @@ export default function SettingsPage() {
   const [aiTestResults, setAITestResults] = useState<Record<string, string>>(
     {}
   );
+  const [editingApiKeyId, setEditingApiKeyId] = useState<string | null>(null);
+  const [editingApiKeyValue, setEditingApiKeyValue] = useState("");
+  const [editingApiKeySaving, setEditingApiKeySaving] = useState(false);
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null);
 
   // X / Twitter API state
@@ -547,6 +550,27 @@ export default function SettingsPage() {
       await loadAIProviders();
     } catch (err) {
       setAIError(err instanceof Error ? err.message : "Sağlayıcı silinemedi.");
+    }
+  }
+
+  async function saveApiKey(id: string) {
+    if (!editingApiKeyValue.trim()) return;
+    setEditingApiKeySaving(true);
+    try {
+      const res = await fetch(`/api/ai/providers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: editingApiKeyValue.trim() })
+      });
+      const payload = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(payload.error ?? "API anahtarı güncellenemedi.");
+      setEditingApiKeyId(null);
+      setEditingApiKeyValue("");
+      await loadAIProviders();
+    } catch (err) {
+      setAIError(err instanceof Error ? err.message : "API anahtarı güncellenemedi.");
+    } finally {
+      setEditingApiKeySaving(false);
     }
   }
 
@@ -1098,6 +1122,17 @@ export default function SettingsPage() {
                     >
                       Test
                     </button>
+                    <button
+                      type="button"
+                      className="secondary-button px-sm py-xs font-label-sm text-label-sm"
+                      onClick={() => {
+                        setEditingApiKeyId(p.id);
+                        setEditingApiKeyValue("");
+                        setAIError(null);
+                      }}
+                    >
+                      API Anahtarını Güncelle
+                    </button>
                     {!p.isDefault && (
                       <button
                         type="button"
@@ -1115,6 +1150,33 @@ export default function SettingsPage() {
                       Sil
                     </button>
                   </div>
+                  {editingApiKeyId === p.id && (
+                    <div className="mt-sm flex w-full items-center gap-xs">
+                      <input
+                        type="password"
+                        className="input flex-1 py-xs font-body-sm text-body-sm"
+                        placeholder="Yeni API anahtarı"
+                        value={editingApiKeyValue}
+                        onChange={(e) => setEditingApiKeyValue(e.target.value)}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        className="primary-button px-sm py-xs font-label-sm text-label-sm"
+                        disabled={editingApiKeySaving || !editingApiKeyValue.trim()}
+                        onClick={() => saveApiKey(p.id)}
+                      >
+                        {editingApiKeySaving ? "Kaydediliyor..." : "Kaydet"}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-button px-sm py-xs font-label-sm text-label-sm"
+                        onClick={() => { setEditingApiKeyId(null); setEditingApiKeyValue(""); }}
+                      >
+                        İptal
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
