@@ -7,7 +7,7 @@ import { MaterialIcon } from "@/components/material-icon";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { readJsonResponse } from "@/lib/client/http";
 
-type Platform = "INSTAGRAM" | "X" | "WORDPRESS";
+type Platform = "INSTAGRAM" | "X" | "WORDPRESS" | "CUSTOM_SITE";
 
 type ContentStatus =
   | "DRAFT"
@@ -69,6 +69,11 @@ const platformMeta: Record<
     icon: "web",
     iconClass: "text-green-700",
     label: "BLOG"
+  },
+  CUSTOM_SITE: {
+    icon: "language",
+    iconClass: "text-indigo-500",
+    label: "WEB SİTESİ"
   }
 };
 
@@ -108,7 +113,10 @@ function formatDateTime(value: string | null) {
 function cardTitle(card: ContentCard) {
   const platformData = safeJsonParse(card.platformData);
 
-  if (card.platform === "WORDPRESS" && typeof platformData.title === "string") {
+  if (
+    (card.platform === "WORDPRESS" || card.platform === "CUSTOM_SITE") &&
+    typeof platformData.title === "string"
+  ) {
     return platformData.title;
   }
 
@@ -119,7 +127,7 @@ function cardDescription(card: ContentCard) {
   const platformData = safeJsonParse(card.platformData);
 
   if (
-    card.platform === "WORDPRESS" &&
+    (card.platform === "WORDPRESS" || card.platform === "CUSTOM_SITE") &&
     typeof platformData.excerpt === "string" &&
     platformData.excerpt
   ) {
