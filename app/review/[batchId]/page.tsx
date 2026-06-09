@@ -152,6 +152,28 @@ export default function ReviewPage() {
     }
   }
 
+  async function deleteItem(itemId: string) {
+    setBusy(true);
+
+    try {
+      const res = await fetch(`/api/batches/${batchId}/items/${itemId}`, {
+        method: "DELETE"
+      });
+
+      if (!res.ok) {
+        const p = (await res.json()) as { error?: string };
+        throw new Error(p.error ?? "Silinemedi.");
+      }
+
+      setSelectedIds((prev) => prev.filter((x) => x !== itemId));
+      await loadBatch();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Silme başarısız.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function bulkApprove(ids?: string[]) {
     setBusy(true);
 
@@ -394,6 +416,7 @@ export default function ReviewPage() {
                 onSelect={toggleSelect}
                 onApprove={approveItem}
                 onReject={rejectItem}
+                onDelete={deleteItem}
                 onEdit={(i) => {
                   const data = normalizeEditableData(
                     i,

@@ -38,6 +38,7 @@ type ReviewCardProps = {
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   onEdit: (item: ReviewItemData) => void;
+  onDelete: (id: string) => void;
   busy: boolean;
 };
 
@@ -81,6 +82,7 @@ export function ReviewCard({
   onApprove,
   onReject,
   onEdit,
+  onDelete,
   busy
 }: ReviewCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -266,46 +268,57 @@ export function ReviewCard({
           </div>
         ) : null}
 
-        {!isApproved && !isRejected ? (
-          <div className="mt-auto flex flex-wrap gap-xs border-t border-outline-variant pt-sm">
-            <button
-              type="button"
-              className="secondary-button flex-1 px-sm py-2 font-label-sm text-label-sm"
-              disabled={busy}
-              onClick={() => setDetailsOpen((current) => !current)}
-            >
-              <MaterialIcon name="visibility" size={16} />
-              {detailsOpen ? "Kapat" : "Detay"}
-            </button>
-            <button
-              type="button"
-              className="secondary-button flex-1 px-sm py-2 font-label-sm text-label-sm"
-              disabled={busy}
-              onClick={() => onEdit(item)}
-            >
-              <MaterialIcon name="edit" size={16} />
-              Düzenle
-            </button>
-            <button
-              type="button"
-              className="primary-button flex-1 px-sm py-2 font-label-sm text-label-sm disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={busy}
-              onClick={() => onApprove(item.id)}
-            >
-              <MaterialIcon name="check_circle" size={16} />
-              Onayla
-            </button>
-            <button
-              type="button"
-              className="secondary-button flex-1 px-sm py-2 font-label-sm text-label-sm text-error hover:bg-error-container/20"
-              disabled={busy}
-              onClick={() => onReject(item.id)}
-            >
-              <MaterialIcon name="cancel" size={16} />
-              Reddet
-            </button>
-          </div>
-        ) : null}
+        <div className="mt-auto flex flex-wrap gap-xs border-t border-outline-variant pt-sm">
+          {!isApproved && !isRejected ? (
+            <>
+              <button
+                type="button"
+                className="secondary-button flex-1 px-sm py-2 font-label-sm text-label-sm"
+                disabled={busy}
+                onClick={() => setDetailsOpen((current) => !current)}
+              >
+                <MaterialIcon name="visibility" size={16} />
+                {detailsOpen ? "Kapat" : "Detay"}
+              </button>
+              <button
+                type="button"
+                className="secondary-button flex-1 px-sm py-2 font-label-sm text-label-sm"
+                disabled={busy}
+                onClick={() => onEdit(item)}
+              >
+                <MaterialIcon name="edit" size={16} />
+                Düzenle
+              </button>
+              <button
+                type="button"
+                className="primary-button flex-1 px-sm py-2 font-label-sm text-label-sm disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={busy}
+                onClick={() => onApprove(item.id)}
+              >
+                <MaterialIcon name="check_circle" size={16} />
+                Onayla
+              </button>
+              <button
+                type="button"
+                className="secondary-button flex-1 px-sm py-2 font-label-sm text-label-sm text-error hover:bg-error-container/20"
+                disabled={busy}
+                onClick={() => onReject(item.id)}
+              >
+                <MaterialIcon name="cancel" size={16} />
+                Reddet
+              </button>
+            </>
+          ) : null}
+          <button
+            type="button"
+            className="secondary-button w-full px-sm py-2 font-label-sm text-label-sm text-error hover:bg-error-container/20"
+            disabled={busy}
+            onClick={() => onDelete(item.id)}
+          >
+            <MaterialIcon name="delete" size={16} />
+            Sil
+          </button>
+        </div>
       </div>
     </article>
   );
